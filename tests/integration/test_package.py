@@ -20,16 +20,16 @@ PY_VERSION = sys.version_info[:2]
 VERSION_CUTOFF = (3, 11)
 # We're being cautious here, but we want to fix the package versions we
 # try to install on older versions of python.
-# If the python version being tested is less than the VERSION_CUTOFF of 3.9,
+# If the python version being tested is less than or equal to VERSION_CUTOFF,
 # then we'll install the `legacy_version` in the packages below.  This is to
 # ensure we don't regress on being able to package older package versions on
 # older versions on python. Any python version above the VERSION_CUTOFF will
 # install the `version` identifier.  That way newer versions of python won't
 # need to update this list as long as a package can still be installed on
-# 3.10 or higher.
+# versions greater than VERSION_CUTOFF.
 PACKAGES_TO_TEST = {
     'pandas': {
-        'version': '2.2.0',
+        'version': '2.2.3',
         'legacy_version': '1.5.3',
         'contents': [
             'pandas/*__init__.py',
@@ -37,7 +37,7 @@ PACKAGES_TO_TEST = {
         ],
     },
     'SQLAlchemy': {
-        'version': '2.0.27',
+        'version': '2.0.40',
         'legacy_version': '1.4.47',
         'contents': [
             'sqlalchemy/__init__.py',
@@ -45,7 +45,7 @@ PACKAGES_TO_TEST = {
         ],
     },
     'numpy': {
-        'version': '1.26.4',
+        'version': '2.2.5',
         'legacy_version': '1.23.3',
         'contents': [
             'numpy/__init__.py',
@@ -53,7 +53,7 @@ PACKAGES_TO_TEST = {
         ],
     },
     'cryptography': {
-        'version': '42.0.4',
+        'version': '44.0.3',
         'legacy_version': '39.0.0',
         'contents': [
             'cryptography/__init__.py',
@@ -61,22 +61,22 @@ PACKAGES_TO_TEST = {
         ],
     },
     'Jinja2': {
-        'version': '3.1.3',
+        'version': '3.1.6',
         'legacy_version': '2.11.2',
         'contents': ['jinja2/__init__.py'],
     },
     'Mako': {
-        'version': '1.3.2',
+        'version': '1.3.10',
         'legacy_version': '1.1.3',
         'contents': ['mako/__init__.py'],
     },
     'MarkupSafe': {
-        'version': '2.1.5',
+        'version': '3.0.2',
         'legacy_version': '1.1.1',
         'contents': ['markupsafe/__init__.py'],
     },
     'scipy': {
-        'version': '1.12.0',
+        'version': '1.15.3',
         'legacy_version': '1.10.1',
         'contents': [
             'scipy/__init__.py',
@@ -84,12 +84,12 @@ PACKAGES_TO_TEST = {
         ],
     },
     'cffi': {
-        'version': '1.16.0',
+        'version': '1.17.1',
         'legacy_version': '1.15.1',
         'contents': ['_cffi_backend.cpython-*-x86_64-linux-gnu.so'],
     },
     'pygit2': {
-        'version': '1.14.1',
+        'version': '1.17.0',
         'legacy_version': '1.10.1',
         'contents': ['pygit2/_pygit2.cpython-*-x86_64-linux-gnu.so'],
     },
@@ -215,7 +215,7 @@ class TestPackage(object):
         )
 
     def test_can_package_pandas(self, runner, app_skeleton, no_local_config):
-        version = '2.2.0' if sys.version_info[1] >= 10 else '2.0.3'
+        version = '2.2.3' if sys.version_info[1] >= 10 else '2.0.3'
         assert_can_package_dependency(
             runner,
             app_skeleton,

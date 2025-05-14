@@ -410,8 +410,8 @@ def test_error_when_no_deployed_record(runner, mock_cli_factory):
 
 
 @pytest.mark.skipif(
-    (3, 9) <= sys.version_info[:2] <= (3, 12),
-    reason=("Cannot generate pipeline for python3.9 - python3.12"),
+    (3, 9) <= sys.version_info[:2] <= (3, 13),
+    reason=("Cannot generate pipeline for python3.9 - python3.13"),
 )
 def test_can_generate_pipeline_for_all(runner):
     with runner.isolated_filesystem():
