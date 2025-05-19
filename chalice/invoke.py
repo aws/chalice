@@ -6,7 +6,7 @@ from typing import Any, Optional, Dict, List, Union, Tuple  # noqa
 from chalice.config import DeployedResources  # noqa
 from chalice.awsclient import TypedAWSClient  # noqa
 from chalice.utils import UI  # noqa
-from chalice.compat import StringIO
+from io import StringIO
 
 
 OptBytes = Optional[bytes]
