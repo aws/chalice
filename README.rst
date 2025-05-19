@@ -2,17 +2,15 @@
 AWS Chalice
 ===========
 
-.. image:: https://badges.gitter.im/awslabs/chalice.svg
-   :target: https://gitter.im/awslabs/chalice?utm_source=badge&utm_medium=badge
-   :alt: Gitter
-.. image:: https://readthedocs.org/projects/chalice/badge/?version=latest
-   :target: http://aws.github.io/chalice/?badge=latest
-   :alt: Documentation Status
-
-
 .. image:: https://aws.github.io/chalice/_images/chalice-logo-whitespace.png
    :target: https://aws.github.io/chalice/
    :alt: Chalice Logo
+
+
+**This is the v2 branch of the Chalice framework, which contains in-progress
+features for the next major version of Chalice, v2.  It is not recommended
+for production use, backwards compatibility is not guaranteed while we
+work on v2.  You are welcome to try out v2 and provide feedback.**
 
 
 Chalice is a framework for writing serverless apps in python. It allows
@@ -109,17 +107,17 @@ Quickstart
 .. quick-start-begin
 
 In this tutorial, you'll use the ``chalice`` command line utility
-to create and deploy a basic REST API.  This quickstart uses Python 3.7,
+to create and deploy a basic REST API.  This quickstart uses Python 3.12,
 but AWS Chalice supports all versions of python supported by AWS Lambda,
-which includes Python 3.7 through python 3.12.
+which includes Python 3.12 through python 3.13.
 
 To install Chalice, we'll first create and activate a virtual environment
-in python3.7::
+in python3.12::
 
     $ python3 --version
-    Python 3.7.3
-    $ python3 -m venv venv37
-    $ . venv37/bin/activate
+    Python 3.12.3
+    $ python3 -m venv venv312
+    $ . venv312/bin/activate
 
 Next we'll install Chalice using ``pip``::
 
