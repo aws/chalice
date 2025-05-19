@@ -6,7 +6,7 @@
 #
 alabaster==0.7.13
     # via sphinx
-astroid==3.2.4
+astroid==3.3.10
     # via pylint
 attrs==24.2.0
     # via hypothesis
@@ -89,7 +89,7 @@ pygments==2.18.0
     #   -r requirements-dev.in
     #   doc8
     #   sphinx
-pylint==3.2.7
+pylint==3.3.7
     # via -r requirements-dev.in
 pytest==8.3.3
     # via
@@ -129,6 +129,8 @@ sphinxcontrib-qthelp==1.0.3
     # via sphinx
 sphinxcontrib-serializinghtml==1.1.5
     # via sphinx
+standard-imghdr==3.13.0
+    # via -r requirements-dev.in
 stevedore==5.3.0
     # via doc8
 tomli==2.1.0
