@@ -182,7 +182,6 @@ dependencies = [
     { name = "pip" },
     { name = "pyyaml" },
     { name = "setuptools" },
-    { name = "sphinx" },
     { name = "wheel" },
 ]
 
@@ -210,6 +209,7 @@ dev = [
     { name = "requests" },
     { name = "ruff" },
     { name = "sphinx" },
+    { name = "standard-imghdr" },
     { name = "types-python-dateutil" },
     { name = "types-pyyaml" },
     { name = "types-six" },
@@ -227,7 +227,6 @@ requires-dist = [
     { name = "pip", specifier = ">=9,<24.4" },
     { name = "pyyaml", specifier = ">=5.3.1,<7.0.0" },
     { name = "setuptools" },
-    { name = "sphinx", specifier = ">=4.3.2" },
     { name = "watchdog", marker = "extra == 'event-file-poller'", specifier = "==2.3.1" },
     { name = "wheel" },
 ]
@@ -248,7 +247,9 @@ dev = [
     { name = "pytest-cov" },
     { name = "requests" },
     { name = "ruff" },
+    { name = "sphinx", specifier = ">=4.3.2" },
     { name = "sphinx", specifier = ">=5.0.0,<6.0.0" },
+    { name = "standard-imghdr" },
     { name = "types-python-dateutil" },
     { name = "types-pyyaml" },
     { name = "types-six" },
@@ -970,6 +971,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/3b/44/6716b257b0aa6bfd51a1b31665d1c205fb12cb5ad56de752dfa15657de2f/sphinxcontrib_serializinghtml-2.0.0.tar.gz", hash = "sha256:e9d912827f872c029017a53f0ef2180b327c3f7fd23c87229f7a8e8b70031d4d", size = 16080, upload-time = "2024-07-29T01:10:09.332Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/52/a7/d2782e4e3f77c8450f727ba74a8f12756d5ba823d81b941f1b04da9d033a/sphinxcontrib_serializinghtml-2.0.0-py3-none-any.whl", hash = "sha256:6e2cb0eef194e10c27ec0023bfeb25badbbb5868244cf5bc5bdc04e4464bf331", size = 92072, upload-time = "2024-07-29T01:10:08.203Z" },
+]
+
+[[package]]
+name = "standard-imghdr"
+version = "3.13.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/1a/8d/ab2620fbe2e348483c9cb776c3b7b3cc407899291a041d7fa026469b7cd1/standard_imghdr-3.13.0.tar.gz", hash = "sha256:8d9c68058d882f6fc3542a8d39ef9ff94d2187dc90bd0c851e0902776b7b7a42", size = 5511, upload-time = "2024-10-30T16:01:36.412Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/df/cb/e1da7e340586a078404c7e4328bfefc930867ace8a9a55916fd220cf9547/standard_imghdr-3.13.0-py3-none-any.whl", hash = "sha256:30a1bff5465605bb496f842a6ac3cc1f2131bf3025b0da28d4877d6d4b7cc8e9", size = 4639, upload-time = "2024-10-30T16:01:13.829Z" },
 ]
 
 [[package]]
