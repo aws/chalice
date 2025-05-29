@@ -14,6 +14,7 @@ classifiers = [
     "Natural Language :: English",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 keywords = ["chalice"]
 requires-python = ">=3.12"
@@ -26,7 +27,6 @@ dependencies = [
     "inquirer>=3.0.0,<4.0.0",
     "wheel",
     "setuptools",
-    "sphinx>=4.3.2",
 ]
 
 [build-system]
@@ -61,6 +61,8 @@ dev-dependencies = [
     "websocket-client<2.0.0",
     "pytest-cov",
     "requests",
+    "standard-imghdr",
+    "sphinx>=4.3.2",
 ]
 
 [tool.ruff]

@@ -367,23 +367,7 @@ def test_env_vars_chain_merge():
 def test_can_load_python_version():
     c = Config('dev')
     major, minor = sys.version_info[0], sys.version_info[1]
-    if major == 2:
-        expected_runtime = 'python2.7'
-    elif minor <= 6:
-        expected_runtime = 'python3.6'
-    elif minor <= 7:
-        expected_runtime = 'python3.7'
-    elif minor <= 8:
-        expected_runtime = 'python3.8'
-    elif minor <= 9:
-        expected_runtime = 'python3.9'
-    elif minor <= 10:
-        expected_runtime = 'python3.10'
-    elif minor <= 11:
-        expected_runtime = 'python3.11'
-    else:
-        expected_runtime = 'python3.12'
-    assert c.lambda_python_version == expected_runtime
+    assert c.lambda_python_version == f'python{major}.{minor}'
 
 
 class TestConfigureMinimumCompressionSize(object):
