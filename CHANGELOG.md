@@ -1,6 +1,12 @@
 # CHANGELOG
 
 
+## 1.32.0
+
+
+* feature:Python:Add support for Python 3.13 (#2137)
+* feature:Python:Drop support for Python 3.8 (#2138)
+
 ## 1.31.4
 
 
