@@ -463,6 +463,12 @@ def test_can_parse_route_view_args():
     assert entry.view_args == ['bar', 'qux']
 
 
+def test_can_parse_catch_all_route_view_args():
+    entry = app.RouteEntry(lambda: {"foo": "bar"}, 'view-name',
+                           '/foo/{proxy+}', method='GET')
+    assert entry.view_args == ['proxy']
+
+
 def test_can_route_single_view():
     demo = app.Chalice('app-name')
 
