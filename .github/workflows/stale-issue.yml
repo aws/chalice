@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Stale issue job
     steps:
-    - uses: aws-actions/stale-issue-cleanup@v4
+    - uses: aws-actions/stale-issue-cleanup@v7.1.0
       with:
         issue-types: issues
         ancient-issue-message: ""
