@@ -197,6 +197,9 @@ class Config(object):
             search_dicts.append(
                 self._config_from_disk.get('lambda_functions', {}).get(
                     self.function_name, {}))
+            search_dicts.append(
+                self._user_provided_params.get('lambda_functions', {}).get(
+                    self.function_name, {}))
         search_dicts.extend([self._config_from_disk, self._default_params])
         for cfg_dict in search_dicts:
             if isinstance(cfg_dict, dict) and cfg_dict.get(name) is not None:
