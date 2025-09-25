@@ -243,7 +243,7 @@ Now we're ready to deploy our CloudFormation template using the AWS CLI.  Be
 sure to replace the ``GithubOwner`` and ``GithubRepoName`` with your own
 values for your GitHub repository.  You'll also need to specify the
 ``GithubRepoSecretId`` and ``GithubRepoSecretJSONKey`` if you used values
-other than the default vaues of ``GithubRepoAccess`` and ``OAuthToken`` when
+other than the default values of ``GithubRepoAccess`` and ``OAuthToken`` when
 creating your secret in Secrets Manager.
 
 ::

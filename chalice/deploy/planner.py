@@ -1448,7 +1448,7 @@ class StringFormat(object):
 
 
 class PlanEncoder(json.JSONEncoder):
-    # pylint false positive overriden below
+    # pylint false positive overridden below
     # https://github.com/PyCQA/pylint/issues/414
     def default(self, o):  # pylint: disable=E0202
         # type: (Any) -> Any

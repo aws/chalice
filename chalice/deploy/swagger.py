@@ -154,7 +154,7 @@ class SwaggerGenerator(object):
         if view.api_key_required:
             # When this happens we also have to add the relevant portions
             # to the security definitions.  We have to someone indicate
-            # this because this neeeds to be added to the global config
+            # this because this needs to be added to the global config
             # file.
             current.setdefault('security', []).append({'api_key': []})
         if view.authorizer:

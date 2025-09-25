@@ -122,7 +122,7 @@ class BaseLambdaDeploymentPackager(object):
         # based on a hash of the requirements file.
         # This is done so that we only "pip install -r requirements.txt"
         # when we know there's new dependencies we need to install.
-        # The python version these depedencies were downloaded for is appended
+        # The python version these dependencies were downloaded for is appended
         # to the end of the filename since the the dependencies may not change
         # but if the python version changes then the dependencies need to be
         # re-downloaded since they will not be compatible.
@@ -617,8 +617,8 @@ class DependencyBuilder(object):
     def _download_all_dependencies(
         self, requirements_filename: str, directory: str
     ) -> Set[Package]:
-        # Download dependencies prefering wheel files but falling back to
-        # raw source dependences to get the transitive closure over
+        # Download dependencies preferring wheel files but falling back to
+        # raw source dependencies to get the transitive closure over
         # the dependency graph. Return the set of all package objects
         # which will serve as the master list of dependencies needed to deploy
         # successfully.
@@ -714,7 +714,7 @@ class DependencyBuilder(object):
         # - lambda incompatible wheel files
         # Pip will give us a wheel when it can, but some distributions do not
         # ship with wheels at all in which case we will have an sdist for it.
-        # In some cases a platform specific wheel file may be availble so pip
+        # In some cases a platform specific wheel file may be available so pip
         # will have downloaded that, if our platform does not match the
         # platform lambda runs on (linux_x86_64/manylinux) then the downloaded
         # wheel file may not be compatible with lambda. Pure python wheels
@@ -1131,7 +1131,7 @@ class PipRunner(object):
         # When downloading all dependencies we expect to get an rc of 0 back
         # since we are casting a wide net here letting pip have options about
         # what to download. If a package is not found it is likely because it
-        # does not exist and was mispelled. In this case we raise an error with
+        # does not exist and was misspelled. In this case we raise an error with
         # the package name. Otherwise a nonzero rc results in a generic
         # download error where we pass along the stderr.
         if rc != 0:

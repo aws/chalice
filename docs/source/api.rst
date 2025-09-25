@@ -1628,7 +1628,7 @@ Websockets
 
 .. class:: WebsocketEvent()
 
-  Event object event that is passed as the sole arugment to any handler
+  Event object event that is passed as the sole argument to any handler
   function decorated with one of the three websocket related handlers:
   ``on_ws_connect``, ``on_ws_disconnect``, ``on_ws_message``.
 
@@ -1812,7 +1812,7 @@ Testing
 
   .. attribute:: headers
 
-     A dictionary of HTTP headers in the resopnse.
+     A dictionary of HTTP headers in the response.
 
   .. attribute:: status_code
 

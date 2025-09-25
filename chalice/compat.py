@@ -80,7 +80,7 @@ if os.name == 'nt':
     )
 
     # On windows the C compiling story is much more complex than on posix as
-    # there are many different C compilers that setuptools and disutils will
+    # there are many different C compilers that setuptools and distutils will
     # try and find using a combination of known filepaths, registry entries,
     # and environment variables. Since there is no simple environment variable
     # we can replace when starting the subprocess that builds the package;
@@ -108,7 +108,7 @@ if os.name == 'nt':
     # inject _SETUPTOOLS_SHIM rather than the usual SETUPTOOLS_SHIM in pip.
     # This lets us apply our patches in the same process that will compile
     # the c extensions before the setup.py file has been executed.
-    # The actual patches used are decribed in the comment above
+    # The actual patches used are described in the comment above
     # _SETUPTOOLS_SHIM.
     pip_no_compile_c_shim = (
         'import pip;'
