@@ -8,6 +8,9 @@ on:
     branches:
       - master
       - "feature/**"
+permissions:
+  contents: read
+
 jobs:
   prcheck:
     runs-on: ${{ matrix.os }}
