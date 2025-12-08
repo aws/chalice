@@ -12,3 +12,4 @@ types-six
 types-python-dateutil
 types-PyYAML
 standard-imghdr
+urllib3>=2.6.0

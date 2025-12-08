@@ -139,7 +139,7 @@ types-six==1.16.21.20241105
     # via -r requirements-dev.in
 typing-extensions==4.12.2
     # via mypy
-urllib3==2.5.0
+urllib3==2.6.0
     # via
     #   -r requirements-test.in
     #   botocore

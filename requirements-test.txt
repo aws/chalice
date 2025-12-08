@@ -50,7 +50,7 @@ six==1.16.0
     # via python-dateutil
 sortedcontainers==2.4.0
     # via hypothesis
-urllib3==2.5.0
+urllib3==2.6.0
     # via
     #   -r requirements-test.in
     #   botocore
