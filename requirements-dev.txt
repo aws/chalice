@@ -162,4 +162,4 @@ wheel==0.45.0
     # via -r requirements-dev.in
 
 # The following packages are considered to be unsafe in a requirements file:
-# setuptools
+setuptools<70
