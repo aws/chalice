@@ -747,13 +747,13 @@ class TestDeploymentPackager(object):
         p.handle(config, function)
         assert function.deployment_package.filename == 'package.zip'
         lambda_packager.create_deployment_package.assert_called_with(
-            '.', config.lambda_python_version
+            '.', config.lambda_python_version, 'x86_64'
         )
         assert function.managed_layer.deployment_package.filename == (
             'package-layer.zip'
         )
         layer_packager.create_deployment_package.assert_called_with(
-            '.', config.lambda_python_version
+            '.', config.lambda_python_version, 'x86_64'
         )
 
     def test_layer_package_not_generated_if_filename_populated(self):
@@ -813,6 +813,9 @@ class TestDeploymentPackager(object):
         p.handle(config, package)
 
         assert package.filename == 'package.zip'
+        generator.create_deployment_package.assert_called_with(
+            config.project_dir, config.lambda_python_version, 'x86_64'
+        )
 
     def test_package_not_generated_if_filename_populated(self):
         generator = mock.Mock(spec=packager.LambdaDeploymentPackager)

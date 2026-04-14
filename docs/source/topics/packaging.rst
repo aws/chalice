@@ -49,8 +49,10 @@ There are two options for handling python package dependencies:
 * **requirements.txt** - During the packaging process, Chalice will
   install any packages it finds or can build compatible wheels for.
   Specifically all pure python packages as well as all packages that upload
-  wheel files for the ``manylinux1_x86_64`` platform will be automatically
-  installable.
+  compatible wheel files for the target Lambda architecture will be
+  automatically installable. For ``x86_64`` functions, this includes
+  x86_64 manylinux wheels. For ``arm64`` functions, this includes
+  ``manylinux2014_aarch64`` wheels.
 * **vendor/** - The *contents* of this directory are automatically added to
   your deployment package and its location in your Lambda functions will
   depend on whether you are using automatic Lambda Layers, described in the

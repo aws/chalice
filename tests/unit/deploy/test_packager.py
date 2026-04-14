@@ -157,7 +157,7 @@ class TestPipRunner(object):
 
     def test_build_wheel(self, pip_factory):
         # Test that `pip wheel` is called with the correct params
-        pip, runner = pip_factory()
+        pip, runner = pip_factory(CustomEnv({}))
         wheel = 'foobar-1.0-py3-none-any.whl'
         directory = 'directory'
         runner.build_wheel(wheel, directory)
@@ -225,6 +225,22 @@ class TestPipRunner(object):
             assert pip.calls[i].args == expected_prefix + [package]
             assert pip.calls[i].env_vars is None
             assert pip.calls[i].shim is None
+
+    def test_download_wheels_arm64(self, pip_factory):
+        pip, runner = pip_factory()
+        packages = ['foo']
+        abi = 'cp311'
+        runner.download_manylinux_wheels(
+            abi, packages, 'directory', architecture='arm64'
+        )
+        assert pip.calls[0].args == [
+            'download', '--only-binary=:all:', '--no-deps',
+            '--platform', 'manylinux2014_aarch64',
+            '--implementation', 'cp', '--abi', abi,
+            '--dest', 'directory', 'foo'
+        ]
+        assert pip.calls[0].env_vars is None
+        assert pip.calls[0].shim is None
 
     def test_download_wheels_no_wheels(self, pip_factory):
         pip, runner = pip_factory()

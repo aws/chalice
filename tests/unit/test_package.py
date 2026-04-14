@@ -3,6 +3,7 @@ import json
 from unittest import mock
 
 import pytest
+from chalice.app import Chalice
 from chalice.config import Config
 from chalice import package
 from chalice.constants import LAMBDA_TRUST_POLICY
@@ -438,9 +439,56 @@ class TestTerraformTemplate(TemplateTestBase):
         ]
         assert template['resource']['aws_lambda_layer_version']['layer'] == {
             'layer_name': 'bar',
+            'compatible_architectures': ['x86_64'],
             'compatible_runtimes': ['python2.7'],
             'filename': 'layer.zip',
         }
+
+    def test_uses_function_specific_managed_layers(self):
+        first = self.lambda_function()
+        first.resource_name = 'first'
+        first.function_name = 'app-dev-first'
+        first.managed_layer = models.LambdaLayer(
+            resource_name='managed-layer',
+            layer_name='app-dev-managed-layer',
+            runtime='python2.7',
+            deployment_package=models.DeploymentPackage(filename='layer.zip'),
+        )
+        second = self.lambda_function()
+        second.resource_name = 'second'
+        second.function_name = 'app-dev-second'
+        second.architecture = 'arm64'
+        second.managed_layer = models.LambdaLayer(
+            resource_name='managed-layer-arm64',
+            layer_name='app-dev-managed-layer-arm64',
+            runtime='python2.7',
+            deployment_package=models.DeploymentPackage(
+                filename='layer-arm64.zip',
+                architecture='arm64',
+            ),
+            architecture='arm64',
+        )
+
+        template = self.template_gen.generate([
+            first.managed_layer,
+            second.managed_layer,
+            first,
+            second,
+        ])
+
+        functions = template['resource']['aws_lambda_function']
+        assert functions['first']['layers'] == [
+            '${aws_lambda_layer_version.managed-layer.arn}',
+        ]
+        assert functions['second']['layers'] == [
+            '${aws_lambda_layer_version.managed-layer-arm64.arn}',
+        ]
+        assert functions['second']['architectures'] == ['arm64']
+        assert (
+            template['resource']['aws_lambda_layer_version'][
+                'managed-layer-arm64'
+            ]['compatible_architectures'] == ['arm64']
+        )
 
     def test_adds_reserved_concurrency_when_provided(self, sample_app):
         function = self.lambda_function()
@@ -1125,6 +1173,7 @@ class TestSAMTemplate(TemplateTestBase):
         assert managed_layer == {
             'Type': 'AWS::Serverless::LayerVersion',
             'Properties': {
+                'CompatibleArchitectures': ['x86_64'],
                 'CompatibleRuntimes': [config.lambda_python_version],
                 'LayerName': 'testapp-dev-managed-layer',
                 'ContentUri': models.Placeholder.BUILD_STAGE,
@@ -1155,6 +1204,7 @@ class TestSAMTemplate(TemplateTestBase):
         assert managed_layer == {
             'Type': 'AWS::Serverless::LayerVersion',
             'Properties': {
+                'CompatibleArchitectures': ['x86_64'],
                 'CompatibleRuntimes': [config.lambda_python_version],
                 'LayerName': 'testapp-dev-managed-layer',
                 'ContentUri': models.Placeholder.BUILD_STAGE,
@@ -1163,6 +1213,66 @@ class TestSAMTemplate(TemplateTestBase):
         assert template['Resources']['First']['Properties']['Layers'] == [
             {'Ref': 'ManagedLayer'},
             'arn:aws:mylayer',
+        ]
+
+    def test_adds_architecture_specific_layers_for_mixed_lambdas(self):
+        app = Chalice('testapp')
+
+        @app.lambda_function()
+        def first(event, context):
+            pass
+
+        @app.lambda_function()
+        def second(event, context):
+            pass
+
+        config = Config(
+            chalice_stage='dev',
+            user_provided_params={
+                'chalice_app': app,
+                'app_name': 'testapp',
+                'project_dir': '.',
+                'automatic_layer': True,
+            },
+            config_from_disk={
+                'stages': {
+                    'dev': {
+                        'lambda_functions': {
+                            'second': {
+                                'lambda_architecture': 'arm64',
+                            },
+                        },
+                    },
+                },
+            },
+        )
+
+        template = self.generate_template(config)
+        assert template['Resources']['ManagedLayer']['Properties'] == {
+            'CompatibleArchitectures': ['x86_64'],
+            'CompatibleRuntimes': [config.lambda_python_version],
+            'ContentUri': models.Placeholder.BUILD_STAGE,
+            'LayerName': 'testapp-dev-managed-layer',
+        }
+        assert template['Resources']['ManagedLayerArm64']['Properties'] == {
+            'CompatibleArchitectures': ['arm64'],
+            'CompatibleRuntimes': [config.lambda_python_version],
+            'ContentUri': models.Placeholder.BUILD_STAGE,
+            'LayerName': 'testapp-dev-managed-layer-arm64',
+        }
+        assert (
+            template['Resources']['First']['Properties']['Architectures'] ==
+            ['x86_64']
+        )
+        assert template['Resources']['First']['Properties']['Layers'] == [
+            {'Ref': 'ManagedLayer'},
+        ]
+        assert (
+            template['Resources']['Second']['Properties']['Architectures']
+            == ['arm64']
+        )
+        assert template['Resources']['Second']['Properties']['Layers'] == [
+            {'Ref': 'ManagedLayerArm64'},
         ]
 
     def test_supports_precreated_role(self):
@@ -1204,6 +1314,7 @@ class TestSAMTemplate(TemplateTestBase):
         assert cfn_resource == {
             'Type': 'AWS::Serverless::Function',
             'Properties': {
+                'Architectures': ['x86_64'],
                 'CodeUri': 'foo.zip',
                 'Handler': 'app.app',
                 'MemorySize': 128,
@@ -1301,6 +1412,7 @@ class TestSAMTemplate(TemplateTestBase):
         assert cfn_resource == {
             'Type': 'AWS::Serverless::Function',
             'Properties': {
+                'Architectures': ['x86_64'],
                 'CodeUri': 'foo.zip',
                 'Handler': 'app.app',
                 'MemorySize': 128,

@@ -50,6 +50,8 @@ DEFAULT_TLS_VERSION = 'TLS_1_2'
 
 DEFAULT_LAMBDA_TIMEOUT = 60
 DEFAULT_LAMBDA_MEMORY_SIZE = 128
+DEFAULT_LAMBDA_ARCHITECTURE = 'x86_64'
+VALID_LAMBDA_ARCHITECTURES = ('x86_64', 'arm64')
 MAX_LAMBDA_DEPLOYMENT_SIZE = 50 * (1024 ** 2)
 # This is the name of the main handler used to
 # handle API gateway requests.  This is used as a key

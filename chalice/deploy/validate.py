@@ -8,6 +8,7 @@ from chalice.config import Config  # noqa
 from chalice.constants import EXPERIMENTAL_ERROR_MSG
 from chalice.constants import MIN_COMPRESSION_SIZE
 from chalice.constants import MAX_COMPRESSION_SIZE
+from chalice.constants import VALID_LAMBDA_ARCHITECTURES
 from chalice.compat import STRING_TYPES
 
 
@@ -50,6 +51,7 @@ def validate_configuration(config):
     validate_resource_policy(config)
     validate_sqs_configuration(config.chalice_app)
     validate_environment_variables_type(config)
+    validate_lambda_architecture(config)
 
 
 def validate_resource_policy(config):
@@ -197,6 +199,15 @@ def validate_minimum_compression_size(config):
         raise ValueError("'minimum_compression_size' must be equal to or "
                          "greater than %s and less than or equal to %s."
                          % (MIN_COMPRESSION_SIZE, MAX_COMPRESSION_SIZE))
+
+
+def validate_lambda_architecture(config):
+    # type: (Config) -> None
+    if config.lambda_architecture not in VALID_LAMBDA_ARCHITECTURES:
+        raise ValueError(
+            "'lambda_architecture' must be one of %s."
+            % ", ".join(VALID_LAMBDA_ARCHITECTURES)
+        )
 
 
 def _validate_manage_iam_role(config):

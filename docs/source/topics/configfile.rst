@@ -151,6 +151,15 @@ Lambda should terminate the function. The default ``lambda_timeout`` is ``60``
 seconds.
 
 
+``lambda_architecture``
+~~~~~~~~~~~~~~~~~~~~~~~
+
+The instruction set architecture to use when deploying Lambda functions.
+Valid values are ``x86_64`` and ``arm64``. The default value is ``x86_64``.
+When set to ``arm64``, Chalice will package third party dependencies using
+the ``manylinux2014_aarch64`` platform when downloading compatible wheels.
+
+
 ``layers``
 ~~~~~~~~~~
 
@@ -386,6 +395,7 @@ that can be applied per function:
 * ``iam_policy_file``
 * ``iam_role_arn``
 * ``lambda_memory_size``
+* ``lambda_architecture``
 * ``lambda_timeout``
 * ``layers``
 * ``manage_iam_role``

@@ -175,7 +175,6 @@ class SAMTemplateGenerator(TemplateGenerator):
         # type: (Config, PackageOptions) -> None
         super(SAMTemplateGenerator, self).__init__(config, options)
         self._seen_names = set([])  # type: Set[str]
-        self._chalice_layer = ""
 
     def generate(self, resources):
         # type: (List[models.Model]) -> Dict[str, Any]
@@ -192,12 +191,12 @@ class SAMTemplateGenerator(TemplateGenerator):
         template['Resources'][layer] = {
             "Type": "AWS::Serverless::LayerVersion",
             "Properties": {
+                "CompatibleArchitectures": [resource.architecture],
                 "CompatibleRuntimes": [resource.runtime],
                 "ContentUri": resource.deployment_package.filename,
                 "LayerName": resource.layer_name
             }
         }
-        self._chalice_layer = layer
 
     def _generate_scheduledevent(self, resource, template):
         # type: (models.ScheduledEvent, Dict[str, Any]) -> None
@@ -240,6 +239,7 @@ class SAMTemplateGenerator(TemplateGenerator):
         lambdafunction_definition = {
             'Type': 'AWS::Serverless::Function',
             'Properties': {
+                'Architectures': [resource.architecture],
                 'Runtime': resource.runtime,
                 'Handler': resource.handler,
                 'CodeUri': resource.deployment_package.filename,
@@ -273,8 +273,15 @@ class SAMTemplateGenerator(TemplateGenerator):
                 reserved_concurrency_config)
 
         layers = list(resource.layers) or []  # type: List[Any]
-        if self._chalice_layer:
-            layers.insert(0, {'Ref': self._chalice_layer})
+        if resource.managed_layer is not None:
+            layers.insert(
+                0,
+                {
+                    'Ref': to_cfn_resource_name(
+                        resource.managed_layer.resource_name
+                    ),
+                },
+            )
 
         if layers:
             layers_config = {
@@ -814,11 +821,6 @@ class SAMTemplateGenerator(TemplateGenerator):
 class TerraformGenerator(TemplateGenerator):
     template_file = "chalice.tf"
 
-    def __init__(self, config, options):
-        # type: (Config, PackageOptions) -> None
-        super(TerraformGenerator, self).__init__(config, options)
-        self._chalice_layer = ""
-
     def generate(self, resources):
         # type: (List[models.Model]) -> Dict[str, Any]
         template = {
@@ -1243,14 +1245,15 @@ class TerraformGenerator(TemplateGenerator):
             "aws_lambda_layer_version", {})[
                 resource.resource_name] = {
                     'layer_name': resource.layer_name,
+                    'compatible_architectures': [resource.architecture],
                     'compatible_runtimes': [resource.runtime],
                     'filename': resource.deployment_package.filename,
         }
-        self._chalice_layer = resource.resource_name
 
     def _generate_lambdafunction(self, resource, template):
         # type: (models.LambdaFunction, Dict[str, Any]) -> None
         func_definition = {
+            'architectures': [resource.architecture],
             'function_name': resource.function_name,
             'runtime': resource.runtime,
             'handler': resource.handler,
@@ -1279,9 +1282,10 @@ class TerraformGenerator(TemplateGenerator):
             func_definition['tracing_config'] = {
                 'mode': 'Active'
             }
-        if self._chalice_layer:
+        if resource.managed_layer is not None:
             func_definition['layers'] = [
-                '${aws_lambda_layer_version.%s.arn}' % self._chalice_layer
+                '${aws_lambda_layer_version.%s.arn}'
+                % resource.managed_layer.resource_name
             ]
         if resource.layers:
             func_definition.setdefault('layers', []).extend(

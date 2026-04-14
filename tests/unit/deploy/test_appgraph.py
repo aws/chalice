@@ -62,6 +62,7 @@ class TestApplicationGraphBuilder(object):
                       autogen_policy=False, security_group_ids=None,
                       subnet_ids=None, reserved_concurrency=None, layers=None,
                       automatic_layer=False,
+                      lambda_architecture=None,
                       api_gateway_endpoint_type=None,
                       api_gateway_endpoint_vpce=None,
                       api_gateway_policy_file=None,
@@ -102,6 +103,8 @@ class TestApplicationGraphBuilder(object):
             kwargs['reserved_concurrency'] = reserved_concurrency
         if log_retention_in_days is not None:
             kwargs['log_retention_in_days'] = log_retention_in_days
+        if lambda_architecture is not None:
+            kwargs['lambda_architecture'] = lambda_architecture
         kwargs['layers'] = layers
         config = Config.create(**kwargs)
         return config
@@ -259,6 +262,94 @@ class TestApplicationGraphBuilder(object):
             layers=layers,
             reserved_concurrency=None,
             xray=None,
+        )
+
+    def test_can_build_arm64_lambda_function_app(
+            self, sample_app_lambda_only):
+        builder = ApplicationGraphBuilder()
+        config = self.create_config(
+            sample_app_lambda_only,
+            iam_role_arn='role:arn',
+            lambda_architecture='arm64',
+            automatic_layer=True,
+        )
+        application = builder.build(config, stage_name='dev')
+        function = application.resources[0]
+        assert function.architecture == 'arm64'
+        assert function.deployment_package.architecture == 'arm64'
+        assert function.managed_layer == models.LambdaLayer(
+            resource_name='managed-layer-arm64',
+            layer_name='lambda-only-dev-managed-layer-arm64',
+            runtime=config.lambda_python_version,
+            deployment_package=models.DeploymentPackage(
+                models.Placeholder.BUILD_STAGE,
+                architecture='arm64',
+            ),
+            architecture='arm64',
+        )
+
+    def test_can_build_mixed_architecture_lambda_functions(self):
+        app = Chalice('mixed-arch')
+
+        @app.lambda_function()
+        def first(event, context):
+            pass
+
+        @app.lambda_function()
+        def second(event, context):
+            pass
+
+        builder = ApplicationGraphBuilder()
+        config = Config(
+            chalice_stage='dev',
+            user_provided_params={
+                'chalice_app': app,
+                'app_name': 'mixed-arch',
+                'project_dir': '.',
+                'automatic_layer': True,
+                'manage_iam_role': False,
+                'iam_role_arn': 'role:arn',
+            },
+            config_from_disk={
+                'stages': {
+                    'dev': {
+                        'lambda_functions': {
+                            'second': {
+                                'lambda_architecture': 'arm64',
+                            },
+                        },
+                    },
+                },
+            },
+            default_params={},
+        )
+
+        application = builder.build(config, stage_name='dev')
+        functions = {
+            function.resource_name: function
+            for function in application.resources
+        }
+
+        assert functions['first'].architecture == 'x86_64'
+        assert functions['first'].deployment_package.architecture == 'x86_64'
+        assert (
+            functions['first'].managed_layer.resource_name == 'managed-layer'
+        )
+
+        assert functions['second'].architecture == 'arm64'
+        assert functions['second'].deployment_package.architecture == 'arm64'
+        assert (
+            functions['second'].managed_layer.resource_name
+            == 'managed-layer-arm64'
+        )
+
+        assert (
+            functions['first'].deployment_package
+            is not functions['second'].deployment_package
+        )
+        assert (
+            functions['first'].managed_layer
+            is not functions['second'].managed_layer
         )
 
     def test_can_build_app_with_domain_name(self, sample_app):

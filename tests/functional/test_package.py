@@ -326,6 +326,31 @@ class TestDependencyBuilder(object):
         for req in reqs:
             assert req in installed_packages
 
+    def test_can_get_whls_all_manylinux_arm64(self, tmpdir, pip_runner):
+        reqs = ['foo']
+        pip, runner = pip_runner
+        appdir, builder = self._make_appdir_and_dependency_builder(
+            reqs, tmpdir, runner)
+        requirements_file = os.path.join(appdir, 'requirements.txt')
+        pip.packages_to_download(
+            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            packages=[
+                'foo-1.2-cp36-cp36m-manylinux2014_aarch64.whl'
+            ]
+        )
+
+        site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
+        builder.build_site_packages(
+            'cp36m',
+            requirements_file,
+            site_packages,
+            architecture='arm64',
+        )
+        installed_packages = os.listdir(site_packages)
+
+        pip.validate()
+        assert reqs == installed_packages
+
     def test_can_support_new_wheel_tags(self, tmpdir, pip_runner):
         reqs = ['numpy']
         pip, runner = pip_runner

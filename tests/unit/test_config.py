@@ -454,6 +454,61 @@ class TestConfigureLambdaTimeout(object):
         c = Config('dev', config_from_disk=config_from_disk)
         assert c.lambda_timeout == 120
 
+
+class TestConfigureLambdaArchitecture(object):
+    def test_default_lambda_architecture(self):
+        c = Config('dev', config_from_disk={})
+        assert c.lambda_architecture == 'x86_64'
+
+    def test_set_lambda_architecture_global(self):
+        config_from_disk = {
+            'lambda_architecture': 'arm64'
+        }
+        c = Config('dev', config_from_disk=config_from_disk)
+        assert c.lambda_architecture == 'arm64'
+
+    def test_set_lambda_architecture_stage(self):
+        config_from_disk = {
+            'stages': {
+                'dev': {
+                    'lambda_architecture': 'arm64'
+                }
+            }
+        }
+        c = Config('dev', config_from_disk=config_from_disk)
+        assert c.lambda_architecture == 'arm64'
+
+    def test_set_lambda_architecture_override(self):
+        config_from_disk = {
+            'lambda_architecture': 'x86_64',
+            'stages': {
+                'dev': {
+                    'lambda_architecture': 'arm64'
+                }
+            }
+        }
+        c = Config('dev', config_from_disk=config_from_disk)
+        assert c.lambda_architecture == 'arm64'
+
+    def test_set_lambda_architecture_function_override(self):
+        config_from_disk = {
+            'lambda_architecture': 'x86_64',
+            'stages': {
+                'dev': {
+                    'lambda_functions': {
+                        'foo': {
+                            'lambda_architecture': 'arm64',
+                        }
+                    }
+                }
+            }
+        }
+        c = Config('dev', config_from_disk=config_from_disk).scope(
+            chalice_stage='dev',
+            function_name='foo',
+        )
+        assert c.lambda_architecture == 'arm64'
+
     def test_set_lambda_memory_size_stage(self):
         config_from_disk = {
             'stages': {

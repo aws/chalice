@@ -331,6 +331,20 @@ class TestLambdaLayer(object):
             'name', b'foo', 'python2.7') == 'arn:12345:name:3'
         stubbed_session.verify_stubs()
 
+    def test_can_publish_layer_with_architecture(self, stubbed_session):
+        stubbed_session.stub('lambda').publish_layer_version(
+            LayerName='name',
+            CompatibleArchitectures=['arm64'],
+            CompatibleRuntimes=['python2.7'],
+            Content={'ZipFile': b'foo'},
+        ).returns({'LayerVersionArn': 'arn:12345:name:3'})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.publish_layer(
+            'name', b'foo', 'python2.7', architecture='arm64'
+        ) == 'arn:12345:name:3'
+        stubbed_session.verify_stubs()
+
 
 class TestLambdaFunctionExists(object):
 
@@ -1739,6 +1753,23 @@ class TestCreateLambdaFunction(object):
             handler='app.app') == 'arn:12345:name'
         stubbed_session.verify_stubs()
 
+    def test_create_function_with_architecture(self, stubbed_session):
+        stubbed_session.stub('lambda').create_function(
+            FunctionName='name',
+            Runtime='python3.11',
+            Code={'ZipFile': b'foo'},
+            Handler='app.app',
+            Role='myarn',
+            Architectures=['arm64'],
+        ).returns(self.SUCCESS_RESPONSE)
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.create_function(
+            'name', 'myarn', b'foo', runtime='python3.11',
+            handler='app.app', architecture='arm64'
+        ) == 'arn:12345:name'
+        stubbed_session.verify_stubs()
+
     def test_create_function_wait_for_active_state(self, stubbed_session,
                                                    monkeypatch):
         client = stubbed_session.stub('lambda')
@@ -2184,6 +2215,18 @@ class TestUpdateLambdaFunction(object):
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         awsclient.update_function('name', b'foo', memory_size=256)
+        stubbed_session.verify_stubs()
+
+    def test_update_function_code_with_architecture(self, stubbed_session):
+        lambda_client = stubbed_session.stub('lambda')
+        lambda_client.update_function_code(
+            FunctionName='name',
+            ZipFile=b'foo',
+            Architectures=['arm64'],
+        ).returns(self.SUCCESS_RESPONSE)
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        awsclient.update_function('name', b'foo', architecture='arm64')
         stubbed_session.verify_stubs()
 
     def test_update_function_with_vpc_config(self, stubbed_session):

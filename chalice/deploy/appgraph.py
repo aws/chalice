@@ -8,7 +8,9 @@ from typing import Dict, List, Tuple, Any, Set, Optional, Text, Union  # noqa
 from chalice.config import Config  # noqa
 from chalice import app
 from chalice.constants import LAMBDA_TRUST_POLICY
+from chalice.constants import DEFAULT_LAMBDA_ARCHITECTURE
 from chalice.deploy import models
+from chalice.deploy.validate import validate_lambda_architecture
 from chalice.utils import UI  # noqa
 
 StrMapAny = Dict[str, Any]
@@ -21,32 +23,34 @@ class ChaliceBuildError(Exception):
 class ApplicationGraphBuilder(object):
     def __init__(self) -> None:
         self._known_roles: Dict[str, models.IAMRole] = {}
-        self._managed_layer: Optional[models.LambdaLayer] = None
+        self._managed_layers: Dict[str, models.LambdaLayer] = {}
+        self._deployment_packages: Dict[str, models.DeploymentPackage] = {}
 
     def build(self, config: Config, stage_name: str) -> models.Application:
+        self._known_roles = {}
+        self._managed_layers = {}
+        self._deployment_packages = {}
         resources: List[models.Model] = []
-        deployment = models.DeploymentPackage(models.Placeholder.BUILD_STAGE)
         for function in config.chalice_app.pure_lambda_functions:
             resource = self._create_lambda_model(
                 config=config,
-                deployment=deployment,
                 name=function.name,
                 handler_name=function.handler_string,
                 stage_name=stage_name,
             )
             resources.append(resource)
         event_resources = self._create_lambda_event_resources(
-            config, deployment, stage_name
+            config, stage_name
         )
         resources.extend(event_resources)
         if config.chalice_app.routes:
             rest_api = self._create_rest_api_model(
-                config, deployment, stage_name
+                config, stage_name
             )
             resources.append(rest_api)
         if config.chalice_app.websocket_handlers:
             websocket_api = self._create_websocket_api_model(
-                config, deployment, stage_name
+                config, stage_name
             )
             resources.append(websocket_api)
         return models.Application(stage_name, resources)
@@ -93,7 +97,6 @@ class ApplicationGraphBuilder(object):
     def _create_lambda_event_resources(
         self,
         config: Config,
-        deployment: models.DeploymentPackage,
         stage_name: str,
     ) -> List[models.Model]:
         resources: List[models.Model] = []
@@ -101,14 +104,13 @@ class ApplicationGraphBuilder(object):
             if isinstance(event_source, app.S3EventConfig):
                 resources.append(
                     self._create_bucket_notification(
-                        config, deployment, event_source, stage_name
+                        config, event_source, stage_name
                     )
                 )
             elif isinstance(event_source, app.SNSEventConfig):
                 resources.append(
                     self._create_sns_subscription(
                         config,
-                        deployment,
                         event_source,
                         stage_name,
                     )
@@ -116,20 +118,19 @@ class ApplicationGraphBuilder(object):
             elif isinstance(event_source, app.CloudWatchEventConfig):
                 resources.append(
                     self._create_cwe_subscription(
-                        config, deployment, event_source, stage_name
+                        config, event_source, stage_name
                     )
                 )
             elif isinstance(event_source, app.ScheduledEventConfig):
                 resources.append(
                     self._create_scheduled_model(
-                        config, deployment, event_source, stage_name
+                        config, event_source, stage_name
                     )
                 )
             elif isinstance(event_source, app.SQSEventConfig):
                 resources.append(
                     self._create_sqs_subscription(
                         config,
-                        deployment,
                         event_source,
                         stage_name,
                     )
@@ -138,7 +139,6 @@ class ApplicationGraphBuilder(object):
                 resources.append(
                     self._create_kinesis_subscription(
                         config,
-                        deployment,
                         event_source,
                         stage_name,
                     )
@@ -147,7 +147,6 @@ class ApplicationGraphBuilder(object):
                 resources.append(
                     self._create_ddb_subscription(
                         config,
-                        deployment,
                         event_source,
                         stage_name,
                     )
@@ -157,13 +156,11 @@ class ApplicationGraphBuilder(object):
     def _create_rest_api_model(
         self,
         config: Config,
-        deployment: models.DeploymentPackage,
         stage_name: str,
     ) -> models.RestAPI:
         # Need to mess with the function name for back-compat.
         lambda_function = self._create_lambda_model(
             config=config,
-            deployment=deployment,
             name='api_handler',
             handler_name='app.app',
             stage_name=stage_name,
@@ -182,7 +179,6 @@ class ApplicationGraphBuilder(object):
         for auth in config.chalice_app.builtin_auth_handlers:
             auth_lambda = self._create_lambda_model(
                 config=config,
-                deployment=deployment,
                 name=auth.name,
                 handler_name=auth.handler_string,
                 stage_name=stage_name,
@@ -250,7 +246,6 @@ class ApplicationGraphBuilder(object):
     def _create_websocket_api_model(
         self,
         config: Config,
-        deployment: models.DeploymentPackage,
         stage_name: str,
     ) -> models.WebsocketAPI:
         connect_handler: Optional[models.LambdaFunction] = None
@@ -264,7 +259,6 @@ class ApplicationGraphBuilder(object):
         if '$connect' in routes:
             connect_handler = self._create_lambda_model(
                 config=config,
-                deployment=deployment,
                 name='websocket_connect',
                 handler_name=routes['$connect'],
                 stage_name=stage_name,
@@ -273,7 +267,6 @@ class ApplicationGraphBuilder(object):
         if '$disconnect' in routes:
             disconnect_handler = self._create_lambda_model(
                 config=config,
-                deployment=deployment,
                 name='websocket_disconnect',
                 handler_name=routes['$disconnect'],
                 stage_name=stage_name,
@@ -284,7 +277,6 @@ class ApplicationGraphBuilder(object):
             handler_string = list(routes.values())[0]
             message_handler = self._create_lambda_model(
                 config=config,
-                deployment=deployment,
                 name='websocket_message',
                 handler_name=handler_string,
                 stage_name=stage_name,
@@ -316,13 +308,11 @@ class ApplicationGraphBuilder(object):
     def _create_cwe_subscription(
         self,
         config: Config,
-        deployment: models.DeploymentPackage,
         event_source: app.CloudWatchEventConfig,
         stage_name: str,
     ) -> models.CloudWatchEvent:
         lambda_function = self._create_lambda_model(
             config=config,
-            deployment=deployment,
             name=event_source.name,
             handler_name=event_source.handler_string,
             stage_name=stage_name,
@@ -345,13 +335,11 @@ class ApplicationGraphBuilder(object):
     def _create_scheduled_model(
         self,
         config: Config,
-        deployment: models.DeploymentPackage,
         event_source: app.ScheduledEventConfig,
         stage_name: str,
     ) -> models.ScheduledEvent:
         lambda_function = self._create_lambda_model(
             config=config,
-            deployment=deployment,
             name=event_source.name,
             handler_name=event_source.handler_string,
             stage_name=stage_name,
@@ -413,7 +401,6 @@ class ApplicationGraphBuilder(object):
     def _create_lambda_model(
         self,
         config: Config,
-        deployment: models.DeploymentPackage,
         name: str,
         handler_name: str,
         stage_name: str,
@@ -423,7 +410,7 @@ class ApplicationGraphBuilder(object):
         )
         role = self._get_role_reference(new_config, stage_name, name)
         resource = self._build_lambda_function(
-            new_config, name, handler_name, deployment, role
+            new_config, name, handler_name, role
         )
         if new_config.log_retention_in_days:
             log_resource_name = '%s-log-group' % name
@@ -442,17 +429,39 @@ class ApplicationGraphBuilder(object):
     ) -> Optional[models.LambdaLayer]:
         if not config.automatic_layer:
             return None
-        if self._managed_layer is None:
-            self._managed_layer = models.LambdaLayer(
-                resource_name='managed-layer',
-                layer_name='%s-%s-%s'
-                % (config.app_name, config.chalice_stage, 'managed-layer'),
+        architecture = config.lambda_architecture
+        if architecture not in self._managed_layers:
+            suffix = ''
+            if architecture != DEFAULT_LAMBDA_ARCHITECTURE:
+                suffix = '-%s' % architecture
+            self._managed_layers[architecture] = models.LambdaLayer(
+                resource_name='managed-layer%s' % suffix,
+                layer_name='%s-%s-%s%s'
+                % (
+                    config.app_name,
+                    config.chalice_stage,
+                    'managed-layer',
+                    suffix,
+                ),
                 runtime=config.lambda_python_version,
                 deployment_package=models.DeploymentPackage(
-                    models.Placeholder.BUILD_STAGE
+                    models.Placeholder.BUILD_STAGE,
+                    architecture=architecture,
                 ),
+                architecture=architecture,
             )
-        return self._managed_layer
+        return self._managed_layers[architecture]
+
+    def _get_deployment_package(
+        self, config: Config
+    ) -> models.DeploymentPackage:
+        architecture = config.lambda_architecture
+        if architecture not in self._deployment_packages:
+            self._deployment_packages[architecture] = models.DeploymentPackage(
+                models.Placeholder.BUILD_STAGE,
+                architecture=architecture,
+            )
+        return self._deployment_packages[architecture]
 
     def _get_role_reference(
         self, config: Config, stage_name: str, function_name: str
@@ -548,9 +557,9 @@ class ApplicationGraphBuilder(object):
         config: Config,
         name: str,
         handler_name: str,
-        deployment: models.DeploymentPackage,
         role: models.IAMRole,
     ) -> models.LambdaFunction:
+        validate_lambda_architecture(config)
         function_name = '%s-%s-%s' % (
             config.app_name,
             config.chalice_stage,
@@ -567,12 +576,13 @@ class ApplicationGraphBuilder(object):
             tags=config.tags,
             timeout=config.lambda_timeout,
             memory_size=config.lambda_memory_size,
-            deployment_package=deployment,
+            deployment_package=self._get_deployment_package(config),
             role=role,
             security_group_ids=security_group_ids,
             subnet_ids=subnet_ids,
             reserved_concurrency=config.reserved_concurrency,
             layers=lambda_layers,
+            architecture=config.lambda_architecture,
             managed_layer=self._get_managed_lambda_layer(config),
             xray=config.xray_enabled,
         )
@@ -593,13 +603,11 @@ class ApplicationGraphBuilder(object):
     def _create_bucket_notification(
         self,
         config: Config,
-        deployment: models.DeploymentPackage,
         s3_event: app.S3EventConfig,
         stage_name: str,
     ) -> models.S3BucketNotification:
         lambda_function = self._create_lambda_model(
             config=config,
-            deployment=deployment,
             name=s3_event.name,
             handler_name=s3_event.handler_string,
             stage_name=stage_name,
@@ -618,13 +626,11 @@ class ApplicationGraphBuilder(object):
     def _create_sns_subscription(
         self,
         config: Config,
-        deployment: models.DeploymentPackage,
         sns_config: app.SNSEventConfig,
         stage_name: str,
     ) -> models.SNSLambdaSubscription:
         lambda_function = self._create_lambda_model(
             config=config,
-            deployment=deployment,
             name=sns_config.name,
             handler_name=sns_config.handler_string,
             stage_name=stage_name,
@@ -640,13 +646,11 @@ class ApplicationGraphBuilder(object):
     def _create_sqs_subscription(
         self,
         config: Config,
-        deployment: models.DeploymentPackage,
         sqs_config: app.SQSEventConfig,
         stage_name: str,
     ) -> models.SQSEventSource:
         lambda_function = self._create_lambda_model(
             config=config,
-            deployment=deployment,
             name=sqs_config.name,
             handler_name=sqs_config.handler_string,
             stage_name=stage_name,
@@ -671,13 +675,11 @@ class ApplicationGraphBuilder(object):
     def _create_kinesis_subscription(
         self,
         config: Config,
-        deployment: models.DeploymentPackage,
         kinesis_config: app.KinesisEventConfig,
         stage_name: str,
     ) -> models.KinesisEventSource:
         lambda_function = self._create_lambda_model(
             config=config,
-            deployment=deployment,
             name=kinesis_config.name,
             handler_name=kinesis_config.handler_string,
             stage_name=stage_name,
@@ -697,13 +699,11 @@ class ApplicationGraphBuilder(object):
     def _create_ddb_subscription(
         self,
         config: Config,
-        deployment: models.DeploymentPackage,
         ddb_config: app.DynamoDBEventConfig,
         stage_name: str,
     ) -> models.DynamoDBEventSource:
         lambda_function = self._create_lambda_model(
             config=config,
-            deployment=deployment,
             name=ddb_config.name,
             handler_name=ddb_config.handler_string,
             stage_name=stage_name,

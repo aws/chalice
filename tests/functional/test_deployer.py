@@ -276,7 +276,10 @@ def test_py_deps_in_layer_package(tmpdir, layer_packager):
         _assert_not_in_zip('%s/chalicelib/__init__.py' % prefix, f)
         _assert_not_in_zip('%s/app.py' % prefix, f)
     deps_builder.build_site_packages.assert_called_with(
-        'cp311', str(appdir.join('requirements.txt')), mock.ANY
+        'cp311',
+        str(appdir.join('requirements.txt')),
+        mock.ANY,
+        architecture='x86_64',
     )
 
 

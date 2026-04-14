@@ -8,6 +8,7 @@ from chalice import __version__ as current_chalice_version
 from chalice.app import Chalice  # noqa
 from chalice.constants import DEFAULT_STAGE_NAME
 from chalice.constants import DEFAULT_HANDLER_NAME
+from chalice.constants import DEFAULT_LAMBDA_ARCHITECTURE
 
 
 StrMap = Dict[str, Any]
@@ -272,6 +273,15 @@ class Config(object):
         return self._chain_lookup('lambda_timeout',
                                   varies_per_chalice_stage=True,
                                   varies_per_function=True)
+
+    @property
+    def lambda_architecture(self) -> str:
+        value = self._chain_lookup('lambda_architecture',
+                                   varies_per_chalice_stage=True,
+                                   varies_per_function=True)
+        if value is None:
+            return DEFAULT_LAMBDA_ARCHITECTURE
+        return value
 
     @property
     def automatic_layer(self) -> bool:

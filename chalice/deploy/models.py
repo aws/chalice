@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 import enum
 from typing import List, Dict, Optional as Opt, Any, TypeVar, Union, Set  # noqa
 from typing import cast
+from chalice.constants import DEFAULT_LAMBDA_ARCHITECTURE
 
 
 class Placeholder(enum.Enum):
@@ -135,6 +136,7 @@ class Application(Model):
 @dataclass
 class DeploymentPackage(Model):
     filename: DV[str]
+    architecture: str = DEFAULT_LAMBDA_ARCHITECTURE
 
 
 @dataclass
@@ -179,6 +181,7 @@ class LambdaLayer(ManagedModel):
     layer_name: str
     runtime: str
     deployment_package: DeploymentPackage
+    architecture: str = DEFAULT_LAMBDA_ARCHITECTURE
     is_empty: bool = False
 
     def dependencies(self) -> List[Model]:
@@ -203,6 +206,7 @@ class LambdaFunction(ManagedModel):
     reserved_concurrency: int
     # These are customer created layers.
     layers: List[str]
+    architecture: str = DEFAULT_LAMBDA_ARCHITECTURE
     managed_layer: Opt[LambdaLayer] = None
     log_group: Opt[LogGroup] = None
 

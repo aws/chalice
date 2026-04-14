@@ -424,7 +424,8 @@ class PlanStage(object):
                 params={'layer_name': resource.layer_name,
                         'zip_contents': self._osutils.get_file_contents(
                             filename, binary=True),
-                        'runtime': resource.runtime},
+                        'runtime': resource.runtime,
+                        'architecture': resource.architecture},
                 output_var='layer_version_arn'
             ), "%s lambda layer: %s\n" % (msg, resource.layer_name)),
             models.RecordResourceVariable(
@@ -491,7 +492,8 @@ class PlanStage(object):
                 'memory_size': resource.memory_size,
                 'security_group_ids': resource.security_group_ids,
                 'subnet_ids': resource.subnet_ids,
-                'layers': layers
+                'layers': layers,
+                'architecture': resource.architecture,
             }
 
             api_calls.extend([
@@ -523,7 +525,8 @@ class PlanStage(object):
                 'memory_size': resource.memory_size,
                 'security_group_ids': resource.security_group_ids,
                 'subnet_ids': resource.subnet_ids,
-                'layers': layers
+                'layers': layers,
+                'architecture': resource.architecture,
             }
             api_calls.extend([
                 (models.APICall(
