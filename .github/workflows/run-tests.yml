@@ -19,8 +19,8 @@ jobs:
         os: [ubuntu-latest, macos-latest]
         python-version: [3.9, '3.10', 3.11, 3.12, 3.13]
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         name: Set up Python ${{ matrix.python-version }}
         with:
           python-version: ${{ matrix.python-version }}
@@ -35,11 +35,11 @@ jobs:
       matrix:
         python-version: [3.9, '3.10', 3.11, 3.12, 3.13]
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: '24'
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v6
         name: Set up Python ${{ matrix.python-version }}
         with:
           python-version: ${{ matrix.python-version }}
@@ -65,8 +65,8 @@ jobs:
 #        # only testing python3 on windows.
 #        python-version: [3.6, 3.7, 3.8, 3.9]
 #    steps:
-#      - uses: actions/checkout@v2
-#      - uses: actions/setup-python@v2
+#      - uses: actions/checkout@v6
+#      - uses: actions/setup-python@v6
 #        name: Set up Python ${{ matrix.python-version }}
 #        with:
 #          python-version: ${{ matrix.python-version }}
