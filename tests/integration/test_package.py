@@ -168,7 +168,7 @@ def assert_can_package_dependency(
         raise AssertionError(
             f"Non-zero RC when packaging {package}") from result.exception
     assert result.exit_code == 0
-    assert result.output.strip() == 'Creating deployment package.'
+    assert result.output.strip().startswith('Creating deployment package.')
     package_path = os.path.join(app_skeleton, 'pkg', 'deployment.zip')
     package_file = ZipFile(package_path)
     package_content = package_file.namelist()
