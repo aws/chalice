@@ -63,7 +63,7 @@ jobs:
 #        # python, it's unlikely users are going to install
 #        # python 2.7 which is no longer supported so we're
 #        # only testing python3 on windows.
-#        python-version: [3.6, 3.7, 3.8, 3.9]
+#        python-version: ['3.10', 3.11, 3.12, 3.13]
 #    steps:
 #      - uses: actions/checkout@v2
 #      - uses: actions/setup-python@v2
