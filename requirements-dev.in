@@ -3,7 +3,7 @@ pylint<4.0.0
 doc8<1.0.0
 pydocstyle
 flake8
-Sphinx==4.3.2
+Sphinx==8.1.3
 docutils
 mypy
 wheel

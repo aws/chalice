@@ -367,7 +367,28 @@ def test_env_vars_chain_merge():
 def test_can_load_python_version():
     c = Config('dev')
     major, minor = sys.version_info[0], sys.version_info[1]
-    assert c.lambda_python_version == f'python{major}.{minor}'
+    if (major, minor) < (3, 10):
+        expected = 'python3.10'
+    elif (major, minor) <= (3, 12):
+        expected = f'python{major}.{minor}'
+    else:
+        expected = 'python3.13'
+    assert c.lambda_python_version == expected
+
+
+@pytest.mark.parametrize('version_info,expected', [
+    ((3, 9, 20), 'python3.10'),
+    ((3, 10, 20), 'python3.10'),
+    ((3, 12, 12), 'python3.12'),
+    ((3, 13, 3), 'python3.13'),
+    ((3, 14, 0), 'python3.13'),
+])
+def test_python_version_selects_closest_lambda_runtime(monkeypatch,
+                                                       version_info,
+                                                       expected):
+    monkeypatch.setattr(sys, 'version_info', version_info)
+    c = Config('dev')
+    assert c.lambda_python_version == expected
 
 
 class TestConfigureMinimumCompressionSize(object):

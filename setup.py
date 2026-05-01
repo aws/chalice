@@ -39,6 +39,7 @@ setup(
     author="James Saryerwinnie",
     author_email='js@jamesls.com',
     url='https://github.com/aws/chalice',
+    python_requires='>=3.10',
     packages=find_packages(exclude=['tests', 'tests.*']),
     install_requires=install_requires,
     extras_require={
@@ -68,7 +69,6 @@ setup(
         'License :: OSI Approved :: Apache Software License',
         'Natural Language :: English',
         "Programming Language :: Python :: 3",
-        'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: 3.12',

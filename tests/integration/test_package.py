@@ -17,16 +17,17 @@ from chalice.deploy.packager import NoSuchPackageError
 
 
 PY_VERSION = sys.version_info[:2]
-VERSION_CUTOFF = (3, 11)
+LEGACY_VERSION_CUTOFF = (3, 9)
 # We're being cautious here, but we want to fix the package versions we
 # try to install on older versions of python.
-# If the python version being tested is less than or equal to VERSION_CUTOFF,
+# If the python version being tested is less than or equal to
+# LEGACY_VERSION_CUTOFF,
 # then we'll install the `legacy_version` in the packages below.  This is to
 # ensure we don't regress on being able to package older package versions on
-# older versions on python. Any python version above the VERSION_CUTOFF will
-# install the `version` identifier.  That way newer versions of python won't
-# need to update this list as long as a package can still be installed on
-# versions greater than VERSION_CUTOFF.
+# older versions on python. Any python version above LEGACY_VERSION_CUTOFF
+# will install the `version` identifier.  That way newer versions of python
+# won't need to update this list as long as a package can still be installed
+# on versions greater than LEGACY_VERSION_CUTOFF.
 PACKAGES_TO_TEST = {
     'pandas': {
         'version': '2.2.3',
@@ -130,7 +131,7 @@ def _get_random_package_name():
 
 def _get_package_install_test_cases():
     testcases = []
-    if PY_VERSION <= VERSION_CUTOFF:
+    if PY_VERSION <= LEGACY_VERSION_CUTOFF:
         version_key = 'legacy_version'
     else:
         version_key = 'version'
@@ -184,9 +185,9 @@ class TestPackage(object):
         assert_can_package_dependency(
             runner,
             app_skeleton,
-            'googleapis-common-protos==1.5.2',
+            'googleapis-common-protos==1.74.0',
             contents=[
-                'google/api/__init__.py',
+                'google/api/annotations_pb2.py',
             ],
         )
 
@@ -195,7 +196,7 @@ class TestPackage(object):
         assert_can_package_dependency(
             runner,
             app_skeleton,
-            'simplejson==3.17.0',
+            'simplejson==4.1.1',
             contents=[
                 'simplejson/__init__.py',
             ],
@@ -208,7 +209,7 @@ class TestPackage(object):
         assert_can_package_dependency(
             runner,
             app_skeleton,
-            'SQLAlchemy==1.3.13',
+            'SQLAlchemy==2.0.49',
             contents=[
                 'sqlalchemy/__init__.py',
             ],
