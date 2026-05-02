@@ -2,13 +2,21 @@
 AWS Chalice
 ===========
 
-.. image:: https://badges.gitter.im/awslabs/chalice.svg
-   :target: https://gitter.im/awslabs/chalice?utm_source=badge&utm_medium=badge
-   :alt: Gitter
+.. image:: http://img.shields.io/pypi/v/chalice.svg?style=flat
+   :target: https://pypi.python.org/pypi/chalice/
+   :alt: Package Version
+
+.. image:: https://img.shields.io/pypi/pyversions/chalice.svg?style=flat
+   :target: https://pypi.python.org/pypi/chalice/
+   :alt: Python Versions
+
 .. image:: https://readthedocs.org/projects/chalice/badge/?version=latest
    :target: http://aws.github.io/chalice/?badge=latest
    :alt: Documentation Status
 
+.. image:: http://img.shields.io/pypi/l/chalice.svg?style=flat
+   :target: https://github.com/aws/chalice/blob/master/LICENSE
+   :alt: License
 
 .. image:: https://aws.github.io/chalice/_static/img/chalice-logo-whitespace.png
    :target: https://aws.github.io/chalice/
@@ -256,5 +264,4 @@ Feedback
 
 We'd also love to hear from you.  Please create any Github issues for
 additional features you'd like to see over at
-https://github.com/aws/chalice/issues.  You can also chat with us
-on gitter: https://gitter.im/awslabs/chalice
+https://github.com/aws/chalice/issues.
