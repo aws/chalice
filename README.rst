@@ -10,7 +10,7 @@ AWS Chalice
    :alt: Documentation Status
 
 
-.. image:: https://aws.github.io/chalice/_images/chalice-logo-whitespace.png
+.. image:: https://aws.github.io/chalice/_static/img/chalice-logo-whitespace.png
    :target: https://aws.github.io/chalice/
    :alt: Chalice Logo
 
