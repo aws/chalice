@@ -69,10 +69,11 @@ You can connect a lambda function to an S3 event:
     # Whenever an object is uploaded to 'mybucket'
     # this lambda function will be invoked.
 
-    @app.on_s3_event(bucket='mybucket')
+    @app.on_s3_event(bucket="mybucket")
     def handler(event):
-        print("Object uploaded for bucket: %s, key: %s"
-              % (event.bucket, event.key))
+        print(
+            f"Object uploaded for bucket: {event.bucket}, key: {event.key}"
+        )
 
 As well as an SQS queue:
 
@@ -85,10 +86,10 @@ As well as an SQS queue:
     # Invoke this lambda function whenever a message
     # is sent to the ``my-queue-name`` SQS queue.
 
-    @app.on_sqs_message(queue='my-queue-name')
+    @app.on_sqs_message(queue="my-queue-name")
     def handler(event):
         for record in event:
-            print("Message body: %s" % record.body)
+            print(f"Message body: {record.body}")
 
 
 And several other AWS resources.
@@ -161,7 +162,7 @@ can follow these steps to quickly get started::
 If you want more information on all the supported methods for
 configuring credentials, see the
 `boto3 docs
-<http://boto3.readthedocs.io/en/latest/guide/configuration.html>`__.
+<https://docs.aws.amazon.com/boto3/latest/guide/configuration.html>`__.
 
 
 Creating Your Project
@@ -190,12 +191,12 @@ Let's take a look at the ``app.py`` file:
 
     from chalice import Chalice
 
-    app = Chalice(app_name='helloworld')
+    app = Chalice(app_name="helloworld")
 
 
-    @app.route('/')
+    @app.route("/")
     def index():
-        return {'hello': 'world'}
+        return {"hello": "world"}
 
 
 The ``new-project`` command created a sample app that defines a
