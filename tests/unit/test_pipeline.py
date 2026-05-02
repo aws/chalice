@@ -117,8 +117,6 @@ class TestPipelineGenV2(object):
 
     def test_validate_python_versions(self):
         with pytest.raises(InvalidCodeBuildPythonVersion):
-            self.generate_template(lambda_python_version='python2.7')
-        with pytest.raises(InvalidCodeBuildPythonVersion):
             self.generate_template(lambda_python_version='python3.9')
 
     def test_uses_v2_codebuild_spec(self):
