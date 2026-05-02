@@ -16,7 +16,7 @@ it created when running the ``chalice deploy`` command.
 
     $ chalice delete
     Deleting Rest API: abcd4kwyl4
-    Deleting function aws:arn:lambda:region:123456789:helloworld-dev
+    Deleting function arn:aws:lambda:region:123456789012:function:helloworld-dev
     Deleting IAM Role helloworld-dev
 
 
