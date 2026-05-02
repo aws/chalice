@@ -18,6 +18,10 @@ from chalice.deploy.packager import NoSuchPackageError
 
 PY_VERSION = sys.version_info[:2]
 LEGACY_VERSION_CUTOFF = (3, 9)
+# Pin numpy for packages that depend on it so these smoke tests do not
+# drift to a newer wheel that pip can install locally but Chalice cannot
+# package for the target Lambda runtime.
+NUMPY_VERSION = '2.2.6'
 # We're being cautious here, but we want to fix the package versions we
 # try to install on older versions of python.
 # If the python version being tested is less than or equal to
@@ -32,6 +36,7 @@ PACKAGES_TO_TEST = {
     'pandas': {
         'version': '2.2.3',
         'legacy_version': '1.5.3',
+        'dependencies': ['numpy==%s' % NUMPY_VERSION],
         'contents': [
             'pandas/*__init__.py',
             'pandas/*cpython-*-x86_64-linux-gnu.so'
@@ -46,7 +51,7 @@ PACKAGES_TO_TEST = {
         ],
     },
     'numpy': {
-        'version': '2.2.5',
+        'version': NUMPY_VERSION,
         'legacy_version': '1.23.3',
         'contents': [
             'numpy/__init__.py',
@@ -79,6 +84,7 @@ PACKAGES_TO_TEST = {
     'scipy': {
         'version': '1.15.3',
         'legacy_version': '1.10.1',
+        'dependencies': ['numpy==%s' % NUMPY_VERSION],
         'contents': [
             'scipy/__init__.py',
             'scipy/cluster/_hierarchy.cpython-*-x86_64-linux-gnu.so'
@@ -137,8 +143,9 @@ def _get_package_install_test_cases():
         version_key = 'version'
     for package, config in PACKAGES_TO_TEST.items():
         package_version = f'{package}=={config[version_key]}'
+        requirements = [package_version] + config.get('dependencies', [])
         testcases.append(
-            (package_version, config['contents'])
+            pytest.param(requirements, config['contents'], id=package_version)
         )
     return testcases
 
@@ -148,16 +155,20 @@ def _get_package_install_test_cases():
 @pytest.mark.skipif(not os.environ.get('CHALICE_TEST_EXTENDED_PACKAGING'),
                     reason='Set CHALICE_TEST_EXTENDED_PACKAGING for extended '
                            'packaging tests.')
-@pytest.mark.parametrize('package,contents', _get_package_install_test_cases())
-def test_package_install_smoke_tests(package, contents, runner, app_skeleton):
-    assert_can_package_dependency(runner, app_skeleton, package, contents)
+@pytest.mark.parametrize('requirements,contents',
+                         _get_package_install_test_cases())
+def test_package_install_smoke_tests(requirements, contents, runner,
+                                     app_skeleton):
+    assert_can_package_dependency(runner, app_skeleton, requirements, contents)
 
 
 def assert_can_package_dependency(
-        runner, app_skeleton, package, contents):
+        runner, app_skeleton, requirements, contents):
+    if isinstance(requirements, str):
+        requirements = [requirements]
     req = os.path.join(app_skeleton, 'requirements.txt')
     with open(req, 'w') as f:
-        f.write('%s\n' % package)
+        f.write('\n'.join(requirements) + '\n')
     cli_factory = factory.CLIFactory(app_skeleton)
     package_output_location = os.path.join(app_skeleton, 'pkg')
     result = runner.invoke(
@@ -167,7 +178,8 @@ def assert_can_package_dependency(
              'factory': cli_factory})
     if result.exit_code != 0:
         raise AssertionError(
-            f"Non-zero RC when packaging {package}") from result.exception
+            "Non-zero RC when packaging %s" % (
+                ', '.join(requirements))) from result.exception
     assert result.exit_code == 0
     assert result.output.strip() == 'Creating deployment package.'
     package_path = os.path.join(app_skeleton, 'pkg', 'deployment.zip')
@@ -220,7 +232,7 @@ class TestPackage(object):
         assert_can_package_dependency(
             runner,
             app_skeleton,
-            'pandas==' + version,
+            ['pandas==' + version, 'numpy==%s' % NUMPY_VERSION],
             contents=[
                 'pandas/_libs/__init__.py',
             ],
