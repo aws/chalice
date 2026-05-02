@@ -80,6 +80,7 @@ class BaseLambdaDeploymentPackager(object):
         'python3.11': 'cp311',
         'python3.12': 'cp312',
         'python3.13': 'cp313',
+        'python3.14': 'cp314',
     }
 
     def __init__(
@@ -499,6 +500,7 @@ class DependencyBuilder(object):
         'cp311': (2, 26),
         'cp312': (2, 34),
         'cp313': (2, 34),
+        'cp314': (2, 34),
     }
     # Fallback version if we're on an unknown python version
     # not in _RUNTIME_GLIBC.
@@ -635,8 +637,26 @@ class DependencyBuilder(object):
         # Try to get binary wheels for each package that isn't compatible.
         logger.debug("Downloading manylinux wheels: %s", packages)
         self._pip.download_manylinux_wheels(
-            abi, [pkg.identifier for pkg in packages], directory
+            abi,
+            [pkg.identifier for pkg in packages],
+            directory,
+            self._get_pip_platforms(abi),
         )
+
+    def _get_pip_platforms(self, abi: str) -> List[str]:
+        # Pip treats --platform as a literal tag and does not auto-include
+        # lower manylinux_X_Y versions, so we enumerate every glibc minor up
+        # to the runtime's. The trailing manylinux2014_x86_64 alias engages
+        # pip's legacy compatibility hierarchy (manylinux1, manylinux2010).
+        runtime_major, runtime_minor = self._RUNTIME_GLIBC.get(
+            abi, self._DEFAULT_GLIBC
+        )
+        platforms = [
+            'manylinux_%s_%s_x86_64' % (runtime_major, minor)
+            for minor in range(17, runtime_minor + 1)
+        ]
+        platforms.append('manylinux2014_x86_64')
+        return platforms
 
     def _download_sdists(self, packages: Set[Package], directory: str) -> None:
         logger.debug("Downloading missing sdists: %s", packages)
@@ -1161,7 +1181,11 @@ class PipRunner(object):
             self.build_wheel(wheel_package_path, directory)
 
     def download_manylinux_wheels(
-        self, abi: str, packages: List[str], directory: str
+        self,
+        abi: str,
+        packages: List[str],
+        directory: str,
+        platforms: Optional[List[str]] = None,
     ) -> None:
         """Download wheel files for manylinux for all the given packages."""
         # If any one of these dependencies fails pip will bail out. Since we
@@ -1169,23 +1193,21 @@ class PipRunner(object):
         # each package to pip individually. The return code of pip doesn't
         # matter here since we will inspect the working directory to see which
         # wheels were downloaded. We are only interested in wheel files
-        # compatible with lambda, which means manylinux1_x86_64 platform and
+        # compatible with lambda, which means a manylinux x86_64 platform and
         # cpython implementation. The compatible abi depends on the python
         # version and is checked later.
+        if platforms is None:
+            platforms = ['manylinux2014_x86_64']
         for package in packages:
-            arguments = [
-                '--only-binary=:all:',
-                '--no-deps',
-                '--platform',
-                'manylinux2014_x86_64',
-                '--implementation',
-                'cp',
-                '--abi',
-                abi,
-                '--dest',
-                directory,
+            arguments = ['--only-binary=:all:', '--no-deps']
+            for platform in platforms:
+                arguments.extend(['--platform', platform])
+            arguments.extend([
+                '--implementation', 'cp',
+                '--abi', abi,
+                '--dest', directory,
                 package,
-            ]
+            ])
             self._execute('download', arguments)
 
     def download_sdists(self, packages: List[str], directory: str) -> None:

@@ -193,6 +193,13 @@ class StringLiteral(object):
         self.value = value
 
 
+def get_string_literal_value(node):
+    # type: (ast.AST) -> Optional[str]
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    return None
+
+
 class ParsedCode(object):
     def __init__(self, parsed_ast, symbol_table):
         # type: (ast.AST, ChainedSymbolTable) -> None
@@ -411,8 +418,9 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
         rhs_inferred_type = self._get_inferred_type_for_node(node.value)
         if rhs_inferred_type is None:
             # Special casing assignment to a string literal.
-            if isinstance(node.value, ast.Str):
-                rhs_inferred_type = StringLiteral(node.value.s)
+            string_value = get_string_literal_value(node.value)
+            if string_value is not None:
+                rhs_inferred_type = StringLiteral(string_value)
                 self._set_inferred_type_for_node(node.value, rhs_inferred_type)
         for t in node.targets:
             if isinstance(t, ast.Name):
@@ -451,9 +459,10 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
             # e_0(e_1) : B3CT[e_1]
             if len(node.args) >= 1:
                 service_arg = node.args[0]
-                if isinstance(service_arg, ast.Str):
+                service_name = get_string_literal_value(service_arg)
+                if service_name is not None:
                     self._set_inferred_type_for_node(
-                        node, Boto3ClientType(service_arg.s))
+                        node, Boto3ClientType(service_name))
                 elif isinstance(self._get_inferred_type_for_node(service_arg),
                                 StringLiteral):
                     sub_type = self._get_inferred_type_for_node(service_arg)

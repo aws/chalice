@@ -21,7 +21,8 @@ LEGACY_VERSION_CUTOFF = (3, 9)
 # Pin numpy for packages that depend on it so these smoke tests do not
 # drift to a newer wheel that pip can install locally but Chalice cannot
 # package for the target Lambda runtime.
-NUMPY_VERSION = '2.2.6'
+NUMPY_VERSION = '2.3.4' if PY_VERSION >= (3, 14) else '2.2.6'
+PANDAS_VERSION = '2.3.3' if PY_VERSION >= (3, 14) else '2.2.3'
 # We're being cautious here, but we want to fix the package versions we
 # try to install on older versions of python.
 # If the python version being tested is less than or equal to
@@ -34,7 +35,7 @@ NUMPY_VERSION = '2.2.6'
 # on versions greater than LEGACY_VERSION_CUTOFF.
 PACKAGES_TO_TEST = {
     'pandas': {
-        'version': '2.2.3',
+        'version': PANDAS_VERSION,
         'legacy_version': '1.5.3',
         'dependencies': ['numpy==%s' % NUMPY_VERSION],
         'contents': [
@@ -228,7 +229,7 @@ class TestPackage(object):
         )
 
     def test_can_package_pandas(self, runner, app_skeleton, no_local_config):
-        version = '2.2.3' if sys.version_info[1] >= 10 else '2.0.3'
+        version = PANDAS_VERSION if PY_VERSION >= (3, 10) else '2.0.3'
         assert_can_package_dependency(
             runner,
             app_skeleton,

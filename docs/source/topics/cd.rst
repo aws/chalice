@@ -42,7 +42,7 @@ version, ``v2``, is recommended.  The version can be specified using the
 * The ``v2`` buildspec uses `runtime-versions <https://docs.aws.amazon.com/codebuild/latest/userguide/build-spec-ref.html#build-spec.phases.install.runtime-versions>`__
   to configure which version of Python to use instead of a Python
   version specific CodeBuild image.  For ``v2`` templates the
-  ``aws/codebuild/amazonlinux2-x86_64-standard`` image.
+  ``aws/codebuild/amazonlinux2023-x86_64-standard`` image.
 
 **The v2 pipeline template requires Python 3.10 or higher.** If you're using
 Python versions less than 3.10 you must use the ``v1`` pipeline template.
