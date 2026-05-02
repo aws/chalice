@@ -191,12 +191,12 @@ Let's take a look at the ``app.py`` file:
 
     from chalice import Chalice
 
-    app = Chalice(app_name="helloworld")
+    app = Chalice(app_name='helloworld')
 
 
-    @app.route("/")
+    @app.route('/')
     def index():
-        return {"hello": "world"}
+        return {'hello': 'world'}
 
 
 The ``new-project`` command created a sample app that defines a
