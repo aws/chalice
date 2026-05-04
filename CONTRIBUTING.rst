@@ -67,7 +67,7 @@ First, create a virtual environment for chalice::
     $ source venv/bin/activate
 
 Keep in mind that chalice is designed to work with AWS Lambda.
-Make sure to create your virtual environment using Python 3.9 to 3.12,
+Make sure to create your virtual environment using Python 3.10 to 3.13,
 as these are versions currently supported by both AWS Lambda and chalice.
 
 Next, you'll need to install chalice.  The easiest way to configure this

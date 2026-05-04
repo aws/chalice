@@ -109,17 +109,17 @@ Quickstart
 .. quick-start-begin
 
 In this tutorial, you'll use the ``chalice`` command line utility
-to create and deploy a basic REST API.  This quickstart uses Python 3.9,
+to create and deploy a basic REST API.  This quickstart uses Python 3.10,
 but AWS Chalice supports all versions of python supported by AWS Lambda,
-which includes Python 3.9 through python 3.13.
+which includes Python 3.10 through python 3.13.
 
 To install Chalice, we'll first create and activate a virtual environment
-in python3.9::
+in python3.10::
 
     $ python3 --version
-    Python 3.9.22
-    $ python3 -m venv venv39
-    $ . venv39/bin/activate
+    Python 3.10.20
+    $ python3 -m venv .venv
+    $ . .venv/bin/activate
 
 Next we'll install Chalice using ``pip``::
 

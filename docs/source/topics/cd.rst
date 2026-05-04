@@ -44,8 +44,8 @@ version, ``v2``, is recommended.  The version can be specified using the
   version specific CodeBuild image.  For ``v2`` templates the
   ``aws/codebuild/amazonlinux2-x86_64-standard`` image.
 
-**The v2 pipeline template requires Python 3.7 or higher.** If you're using
-Python versions less than 3.7 you must use the ``v1`` pipeline template.
+**The v2 pipeline template requires Python 3.10 or higher.** If you're using
+Python versions less than 3.10 you must use the ``v1`` pipeline template.
 
 
 Usage example
