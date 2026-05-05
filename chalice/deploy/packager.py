@@ -1131,8 +1131,8 @@ class PipRunner(object):
         # When downloading all dependencies we expect to get an rc of 0 back
         # since we are casting a wide net here letting pip have options about
         # what to download. If a package is not found it is likely because it
-        # does not exist and was misspelled. In this case we raise an error with
-        # the package name. Otherwise a nonzero rc results in a generic
+        # does not exist and was misspelled. In this case we raise an error
+        # with the package name. Otherwise a nonzero rc results in a generic
         # download error where we pass along the stderr.
         if rc != 0:
             if err is None:
