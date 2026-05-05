@@ -46,7 +46,7 @@ rsync -av --delete --exclude '.git' build/html/ ${CHECKOUT_DIR}/
 # paths.
 touch ${CHECKOUT_DIR}/.nojekyll
 
-echo "Commiting docs."
+echo "Committing docs."
 cd ${CHECKOUT_DIR}
 git add -A .
 git commit -am "Updating generated documentation"

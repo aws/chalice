@@ -1735,7 +1735,7 @@ def test_can_explicitly_set_debug_false_in_initializer():
     assert test_app.log.getEffectiveLevel() == logging.ERROR
 
 
-def test_can_set_debug_mode_in_initialzier():
+def test_can_set_debug_mode_in_initializer():
     test_app = app.Chalice('logger-test-3', debug=True)
     assert test_app.debug is True
     assert test_app.log.getEffectiveLevel() == logging.DEBUG
@@ -3177,7 +3177,7 @@ def test_cannot_re_register_websocket_handlers(create_websocket_event):
 
     with pytest.raises(ValueError) as e:
         @demo.on_ws_disconnect()
-        def disconncet_handler_2(event):
+        def disconnect_handler_2(event):
             pass
 
     assert str(e.value) == (
@@ -3658,7 +3658,7 @@ class TestMiddleware:
                 {'name': 'bp_handler', 'bucket': 'mybucket'},
             ]
 
-    def test_blueprint_gets_middlware_added(self):
+    def test_blueprint_gets_middleware_added(self):
         demo = app.Chalice('app-name')
         bp = app.Blueprint('bpmiddleware')
         called = []

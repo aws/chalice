@@ -328,7 +328,7 @@ transition to this new model, the following changes were made:
   Previously it would look for a file named ``.chalice/policy.json``.
   You can also explicitly set this value to
   In order to ease transition, chalice will check for a
-  ``.chalice/policy.json`` file when depoying to the ``dev`` stage.
+  ``.chalice/policy.json`` file when deploying to the ``dev`` stage.
   Support for ``.chalice/policy.json`` will be removed in future
   versions of chalice and users are encouraged to switch to the
   stage specific ``.chalice/policy-<stage-name>.json`` files.
@@ -369,7 +369,7 @@ Any of other deployed values that were needed (for example the
 API Gateway rest API id) was dynamically queried by assuming the
 resource names matches the app name.  In this version of chalice,
 a separate ``.chalice/deployed.json`` file is written on every
-deployement which contains all the resources that have been created.
+deployment which contains all the resources that have been created.
 While this should be a transparent change, you may noticed
 issues if you run commands such as ``chalice url`` and ``chalice logs``
 without first deploying.  To fix this issue, run ``chalice deploy``

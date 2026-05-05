@@ -58,7 +58,7 @@ def remove_stage_from_deployed_values(key: str, filename: str) -> None:
         with open(filename, 'r') as f:
             final_values = json.load(f)
     except IOError:
-        # If there is no file to delete from, then this funciton is a noop.
+        # If there is no file to delete from, then this function is a noop.
         return
 
     try:

@@ -543,7 +543,7 @@ class TestDependencyBuilder(object):
         assert 'bar' not in installed_packages
 
     def test_does_ignore_scripts(self, tmpdir, pip_runner):
-        # Make sure the wheel isntaller does not copy the scripts directory
+        # Make sure the wheel installer does not copy the scripts directory
         # up to the root.
         reqs = ['foo']
         pip, runner = pip_runner
@@ -990,7 +990,7 @@ def test_can_create_app_packager_with_no_autogen(tmpdir, stubbed_session):
     assert 'sam.json' in contents
 
 
-def test_can_create_app_packager_with_yaml_extention(tmpdir, stubbed_session):
+def test_can_create_app_packager_with_yaml_extension(tmpdir, stubbed_session):
     appdir = _create_app_structure(tmpdir)
 
     outdir = tmpdir.mkdir('outdir')
@@ -1094,7 +1094,7 @@ class TestSubprocessPip(object):
         rc, _, err = pip.main(['badcommand'])
         assert rc != 0
         # Don't want to depend on a particular error message from pip since it
-        # may change if we pin a differnet version to Chalice at some point.
+        # may change if we pin a different version to Chalice at some point.
         # But there should be a non-empty error message of some kind.
         assert err != b''
 

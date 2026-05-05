@@ -354,7 +354,7 @@ To test this, we'll combine the botocore stubber and the Chalice test client:
 In the testcase above, we first tell the stubber what API call we're expecting,
 along with the parameters we'll send and the response we expect back from the
 Rekognition service.  Next we use the ``with stub:`` line to activate our stubs.
-This also ensures that when our test exits that we'll deactive the stubs for
+This also ensures that when our test exits that we'll deactivate the stubs for
 this client.  Now we the ``client.lambda_.invoke`` method is called, our
 stubbed client will return the preconfigured response data instead of making
 an actual API call to the Rekognition service.

@@ -42,7 +42,7 @@ class FakeTimeSource(object):
     def time(self):
         """Get the next time.
 
-        This is for mimicing the Clock interface used in local.
+        This is for mimicking the Clock interface used in local.
         """
         time = self._times.pop(0)
         return time
@@ -1051,7 +1051,7 @@ class TestLocalBuiltinAuthorizers(object):
         warning = recorded_warnings[0]
         assert issubclass(warning.category, UserWarning)
         assert ('CognitoUserPoolAuthorizer for machine-to-machine '
-                'communicaiton is not supported in local mode. All requests '
+                'communication is not supported in local mode. All requests '
                 'made against a route will be authorized to allow local '
                 'testing.') in str(warning.message)
 
