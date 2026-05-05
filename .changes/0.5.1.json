@@ -33,7 +33,7 @@
     },
     {
       "category": "deployment",
-      "description": "Handle case where local policy does not exist\n(`29 <https://github.com/awslabs/chalice/issues/29>`__)",
+      "description": "Handle case where local policy does not exist\n([#29](https://github.com/awslabs/chalice/issues/29))",
       "type": "bugfix"
     }
   ]

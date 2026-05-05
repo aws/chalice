@@ -13,7 +13,7 @@
     },
     {
       "category": "rest-api",
-      "description": "Fix api gateway stage being set incorrectly in non-default chalice stage\n(`#$70 <https://github.com/aws/chalice/issues/470>`__)",
+      "description": "Fix api gateway stage being set incorrectly in non-default chalice stage\n([#470](https://github.com/aws/chalice/issues/470))",
       "type": "bugfix"
     }
   ]

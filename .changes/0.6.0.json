@@ -1,6 +1,6 @@
 {
   "schema-version": "0.2",
-  "summary": "Check out the `upgrade notes for 0.6.0\n<http://chalice.readthedocs.io/en/latest/upgrading.html#v0-6-0>`__\nfor more detailed information about changes in this release.\n\n",
+  "summary": "Check out the [upgrade notes for 0.6.0](http://chalice.readthedocs.io/en/latest/upgrading.html#v0-6-0)\nfor more detailed information about changes in this release.\n\n",
   "changes": [
     {
       "category": "local",
