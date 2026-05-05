@@ -2,14 +2,16 @@ name: "Close stale issues"
 
 on:
   schedule:
-    - cron: "*/60 * * * *"
+    - cron: "0 0 * * *"
 
 jobs:
   cleanup:
     runs-on: ubuntu-latest
     name: Stale issue job
+    permissions:
+      issues: write
     steps:
-    - uses: aws-actions/stale-issue-cleanup@v4
+    - uses: aws-actions/stale-issue-cleanup@0604f2edf84a3a66bc0dfb4a30eb07814cbdf440 # v7.1.1
       with:
         issue-types: issues
         ancient-issue-message: ""
