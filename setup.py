@@ -23,7 +23,7 @@ install_requires = [
     'click>=7,<9.0',
     'botocore>=1.14.0,<2.0.0',
     'six>=1.10.0,<2.0.0',
-    'pip>=9,<25.1',
+    'pip>=9,<26.2',
     'jmespath>=0.9.3,<2.0.0',
     'pyyaml>=5.3.1,<7.0.0',
     'inquirer>=3.0.0,<4.0.0',
@@ -73,5 +73,6 @@ setup(
         'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: 3.12',
         'Programming Language :: Python :: 3.13',
+        'Programming Language :: Python :: 3.14',
     ],
 )

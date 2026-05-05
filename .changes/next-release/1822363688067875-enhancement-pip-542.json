@@ -1,0 +1,5 @@
+{
+  "type": "enhancement",
+  "category": "Pip",
+  "description": "Update pip to the latest version (<26.2) ([#2163](https://github.com/aws/chalice/pull/2163))"
+}

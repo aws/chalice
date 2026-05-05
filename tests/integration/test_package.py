@@ -17,25 +17,19 @@ from chalice.deploy.packager import NoSuchPackageError
 
 
 PY_VERSION = sys.version_info[:2]
-LEGACY_VERSION_CUTOFF = (3, 9)
-# Pin numpy for packages that depend on it so these smoke tests do not
-# drift to a newer wheel that pip can install locally but Chalice cannot
-# package for the target Lambda runtime.
-NUMPY_VERSION = '2.2.6'
-# We're being cautious here, but we want to fix the package versions we
-# try to install on older versions of python.
-# If the python version being tested is less than or equal to
-# LEGACY_VERSION_CUTOFF,
-# then we'll install the `legacy_version` in the packages below.  This is to
-# ensure we don't regress on being able to package older package versions on
-# older versions on python. Any python version above LEGACY_VERSION_CUTOFF
-# will install the `version` identifier.  That way newer versions of python
-# won't need to update this list as long as a package can still be installed
-# on versions greater than LEGACY_VERSION_CUTOFF.
+PY314_OR_LATER = PY_VERSION >= (3, 14)
+# Keep these smoke-test pins compatible with every Python version in the
+# current CI matrix. Some projects dropped Python 3.10 support before adding
+# cp314 wheels, so those packages need Python-version-specific pins.
+NUMPY_VERSION = '2.3.4' if PY314_OR_LATER else '2.2.6'
+PANDAS_VERSION = '2.3.3'
+SQLALCHEMY_VERSION = '2.0.49'
+SCIPY_VERSION = '1.17.1' if PY314_OR_LATER else '1.15.3'
+CFFI_VERSION = '2.0.0'
+PYGIT2_VERSION = '1.19.2' if PY314_OR_LATER else '1.17.0'
 PACKAGES_TO_TEST = {
     'pandas': {
-        'version': '2.2.3',
-        'legacy_version': '1.5.3',
+        'version': PANDAS_VERSION,
         'dependencies': ['numpy==%s' % NUMPY_VERSION],
         'contents': [
             'pandas/*__init__.py',
@@ -43,8 +37,7 @@ PACKAGES_TO_TEST = {
         ],
     },
     'SQLAlchemy': {
-        'version': '2.0.40',
-        'legacy_version': '1.4.47',
+        'version': SQLALCHEMY_VERSION,
         'contents': [
             'sqlalchemy/__init__.py',
             'sqlalchemy/*cpython-*-x86_64-linux-gnu.so'
@@ -52,7 +45,6 @@ PACKAGES_TO_TEST = {
     },
     'numpy': {
         'version': NUMPY_VERSION,
-        'legacy_version': '1.23.3',
         'contents': [
             'numpy/__init__.py',
             'numpy/*cpython-*-x86_64-linux-gnu.so'
@@ -60,7 +52,6 @@ PACKAGES_TO_TEST = {
     },
     'cryptography': {
         'version': '44.0.3',
-        'legacy_version': '39.0.0',
         'contents': [
             'cryptography/__init__.py',
             'cryptography/*.so'
@@ -68,22 +59,18 @@ PACKAGES_TO_TEST = {
     },
     'Jinja2': {
         'version': '3.1.6',
-        'legacy_version': '2.11.2',
         'contents': ['jinja2/__init__.py'],
     },
     'Mako': {
         'version': '1.3.10',
-        'legacy_version': '1.1.3',
         'contents': ['mako/__init__.py'],
     },
     'MarkupSafe': {
         'version': '3.0.2',
-        'legacy_version': '1.1.1',
         'contents': ['markupsafe/__init__.py'],
     },
     'scipy': {
-        'version': '1.15.3',
-        'legacy_version': '1.10.1',
+        'version': SCIPY_VERSION,
         'dependencies': ['numpy==%s' % NUMPY_VERSION],
         'contents': [
             'scipy/__init__.py',
@@ -91,18 +78,15 @@ PACKAGES_TO_TEST = {
         ],
     },
     'cffi': {
-        'version': '1.17.1',
-        'legacy_version': '1.15.1',
+        'version': CFFI_VERSION,
         'contents': ['_cffi_backend.cpython-*-x86_64-linux-gnu.so'],
     },
     'pygit2': {
-        'version': '1.17.0',
-        'legacy_version': '1.10.1',
+        'version': PYGIT2_VERSION,
         'contents': ['pygit2/_pygit2.cpython-*-x86_64-linux-gnu.so'],
     },
     'pyrsistent': {
         'version': '0.20.0',
-        'legacy_version': '0.17.3',
         'contents': ['pyrsistent/__init__.py'],
     },
 }
@@ -137,12 +121,8 @@ def _get_random_package_name():
 
 def _get_package_install_test_cases():
     testcases = []
-    if PY_VERSION <= LEGACY_VERSION_CUTOFF:
-        version_key = 'legacy_version'
-    else:
-        version_key = 'version'
     for package, config in PACKAGES_TO_TEST.items():
-        package_version = f'{package}=={config[version_key]}'
+        package_version = f'{package}=={config["version"]}'
         requirements = [package_version] + config.get('dependencies', [])
         testcases.append(
             pytest.param(requirements, config['contents'], id=package_version)
@@ -228,11 +208,10 @@ class TestPackage(object):
         )
 
     def test_can_package_pandas(self, runner, app_skeleton, no_local_config):
-        version = '2.2.3' if sys.version_info[1] >= 10 else '2.0.3'
         assert_can_package_dependency(
             runner,
             app_skeleton,
-            ['pandas==' + version, 'numpy==%s' % NUMPY_VERSION],
+            ['pandas==' + PANDAS_VERSION, 'numpy==%s' % NUMPY_VERSION],
             contents=[
                 'pandas/_libs/__init__.py',
             ],

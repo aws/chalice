@@ -1,7 +1,7 @@
 Python Version Support
 ======================
 
-Chalice supports Python 3.10 through Python 3.13.  You can see the list of
+Chalice supports Python 3.10 through Python 3.14.  You can see the list of
 supported python versions for Lambda in their
 `docs <https://docs.aws.amazon.com/lambda/latest/dg/lambda-python.html>`__.
 
@@ -35,8 +35,8 @@ explicitly configure which version of python you want to use. For example::
 
 
 In the example above, we're using python 3.10.20 so chalice automatically
-selects the ``python3.10`` runtime for lambda.  If we were using python 3.13,
-chalice would automatically select ``python3.13`` as the runtime.
+selects the ``python3.10`` runtime for lambda.  If we were using python 3.14,
+chalice would automatically select ``python3.14`` as the runtime.
 
 Chalice will emit a warning if the minor version does not match a python
 version supported by Lambda.  Chalice will select the closest Lambda version
@@ -61,7 +61,7 @@ Python 3.10 ::
     ...
     https://endpoint/api
 
-To upgrade the application to use Python 3.13, create a python3 virtual
+To upgrade the application to use Python 3.14, create a python3 virtual
 environment and redeploy.
 
 ::
@@ -70,6 +70,6 @@ environment and redeploy.
     $ python3 -m venv /tmp/venv3
     $ source /tmp/venv3/bin/activate
     $ python --version
-    Python 3.13.3
+    Python 3.14.4
     $ chalice deploy
     ...
