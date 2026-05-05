@@ -279,7 +279,7 @@ class LambdaContext(object):
         # documentation:
         # Information about the client application and device when invoked
         # through the AWS Mobile SDK, it can be null.
-        # Chalice local does't need to set these since they are specifically
+        # Chalice local doesn't need to set these since they are specifically
         # for the mobile SDK.
         self.identity = None
         self.client_context = None
