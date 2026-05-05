@@ -2,20 +2,28 @@
 AWS Chalice
 ===========
 
-.. image:: https://badges.gitter.im/awslabs/chalice.svg
-   :target: https://gitter.im/awslabs/chalice?utm_source=badge&utm_medium=badge
-   :alt: Gitter
+.. image:: https://img.shields.io/pypi/v/chalice.svg?style=flat
+   :target: https://pypi.python.org/pypi/chalice/
+   :alt: Package Version
+
+.. image:: https://img.shields.io/pypi/pyversions/chalice.svg?style=flat
+   :target: https://pypi.python.org/pypi/chalice/
+   :alt: Python Versions
+
 .. image:: https://readthedocs.org/projects/chalice/badge/?version=latest
-   :target: http://aws.github.io/chalice/?badge=latest
+   :target: https://aws.github.io/chalice/?badge=latest
    :alt: Documentation Status
 
+.. image:: https://img.shields.io/pypi/l/chalice.svg?style=flat
+   :target: https://github.com/aws/chalice/blob/master/LICENSE
+   :alt: License
 
-.. image:: https://aws.github.io/chalice/_images/chalice-logo-whitespace.png
+.. image:: https://aws.github.io/chalice/_static/img/chalice-logo-whitespace.png
    :target: https://aws.github.io/chalice/
    :alt: Chalice Logo
 
 
-Chalice is a framework for writing serverless apps in python. It allows
+Chalice is a framework for writing serverless apps in Python. It allows
 you to quickly create and deploy applications that use AWS Lambda.  It provides:
 
 * A command line tool for creating, deploying, and managing your app
@@ -58,13 +66,14 @@ You can connect a lambda function to an S3 event:
 
     app = Chalice(app_name="helloworld")
 
-    # Whenever an object is uploaded to 'mybucket'
+    # Whenever an object is uploaded to "mybucket"
     # this lambda function will be invoked.
 
-    @app.on_s3_event(bucket='mybucket')
+    @app.on_s3_event(bucket="mybucket")
     def handler(event):
-        print("Object uploaded for bucket: %s, key: %s"
-              % (event.bucket, event.key))
+        print(
+            f"Object uploaded for bucket: {event.bucket}, key: {event.key}"
+        )
 
 As well as an SQS queue:
 
@@ -77,10 +86,10 @@ As well as an SQS queue:
     # Invoke this lambda function whenever a message
     # is sent to the ``my-queue-name`` SQS queue.
 
-    @app.on_sqs_message(queue='my-queue-name')
+    @app.on_sqs_message(queue="my-queue-name")
     def handler(event):
         for record in event:
-            print("Message body: %s" % record.body)
+            print(f"Message body: {record.body}")
 
 
 And several other AWS resources.
@@ -92,16 +101,16 @@ and Chalice takes care of deploying your app.
 
     $ chalice deploy
     ...
-    https://endpoint/dev
+    https://endpoint/api
 
     $ curl https://endpoint/api
     {"hello": "world"}
 
 Up and running in less than 30 seconds.
-Give this project a try and share your feedback with us here on Github.
+Give this project a try and share your feedback with us here on GitHub.
 
 The documentation is available
-`here <http://aws.github.io/chalice/>`__.
+`here <https://aws.github.io/chalice/>`__.
 
 Quickstart
 ==========
@@ -110,8 +119,8 @@ Quickstart
 
 In this tutorial, you'll use the ``chalice`` command line utility
 to create and deploy a basic REST API.  This quickstart uses Python 3.10,
-but AWS Chalice supports all versions of python supported by AWS Lambda,
-which includes Python 3.10 through python 3.14.
+but AWS Chalice supports all versions of Python supported by AWS Lambda,
+which includes Python 3.10 through Python 3.14.
 
 To install Chalice, we'll first create and activate a virtual environment
 in python3.10::
@@ -153,7 +162,7 @@ can follow these steps to quickly get started::
 If you want more information on all the supported methods for
 configuring credentials, see the
 `boto3 docs
-<http://boto3.readthedocs.io/en/latest/guide/configuration.html>`__.
+<https://docs.aws.amazon.com/boto3/latest/guide/configuration.html>`__.
 
 
 Creating Your Project
@@ -207,12 +216,12 @@ directory and run ``chalice deploy``::
     Creating lambda function: helloworld-dev
     Creating Rest API
     Resources deployed:
-      - Lambda ARN: arn:aws:lambda:us-west-2:12345:function:helloworld-dev
+      - Lambda ARN: arn:aws:lambda:us-west-2:123456789012:function:helloworld-dev
       - Rest API URL: https://abcd.execute-api.us-west-2.amazonaws.com/api/
 
 You now have an API up and running using API Gateway and Lambda::
 
-    $ curl https://qxea58oupc.execute-api.us-west-2.amazonaws.com/api/
+    $ curl https://abcd.execute-api.us-west-2.amazonaws.com/api/
     {"hello": "world"}
 
 Try making a change to the returned dictionary from the ``index()``
@@ -247,14 +256,13 @@ it created when running the ``chalice deploy`` command.
 
     $ chalice delete
     Deleting Rest API: abcd4kwyl4
-    Deleting function aws:arn:lambda:region:123456789:helloworld-dev
+    Deleting function arn:aws:lambda:region:123456789012:function:helloworld-dev
     Deleting IAM Role helloworld-dev
 
 
 Feedback
 ========
 
-We'd also love to hear from you.  Please create any Github issues for
+We'd also love to hear from you.  Please create any GitHub issues for
 additional features you'd like to see over at
-https://github.com/aws/chalice/issues.  You can also chat with us
-on gitter: https://gitter.im/awslabs/chalice
+https://github.com/aws/chalice/issues.
