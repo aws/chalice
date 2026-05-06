@@ -1414,9 +1414,13 @@ class TypedAWSClient(object):
     ) -> Iterator[CWLogEvent]:
         logs = self._client('logs')
         paginator = logs.get_paginator('filter_log_events')
-        pages = paginator.paginate(
-            logGroupName=log_group_name, interleaved=True
-        )
+        kwargs = {
+            'logGroupName': log_group_name,
+            'interleaved': interleaved,
+        }
+        if start_time is not None:
+            kwargs['startTime'] = int(datetime2timestamp(start_time) * 1000)
+        pages = paginator.paginate(**kwargs)
         try:
             yield from self._iter_log_messages(pages)
         except logs.exceptions.ResourceNotFoundException:
