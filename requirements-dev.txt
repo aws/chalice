@@ -28,7 +28,7 @@ coverage[toml]==7.6.1
     #   pytest-cov
 dill==0.3.9
     # via pylint
-doc8==0.11.2
+doc8==1.1.2
     # via -r requirements-dev.in
 docutils==0.21.2
     # via
@@ -72,8 +72,6 @@ packaging==24.2
     # via
     #   pytest
     #   sphinx
-pbr==6.1.0
-    # via stevedore
 platformdirs==4.3.6
     # via pylint
 pluggy==1.5.0
@@ -131,11 +129,12 @@ sphinxcontrib-serializinghtml==2.0.0
     # via sphinx
 standard-imghdr==3.13.0
     # via -r requirements-dev.in
-stevedore==5.3.0
+stevedore==5.7.0
     # via doc8
 tomli==2.1.0
     # via
     #   coverage
+    #   doc8
     #   mypy
     #   pylint
     #   pytest
