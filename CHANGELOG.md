@@ -900,7 +900,7 @@ for more detailed information about changes in this release.
 * Fix not all resources being retrieved due to pagination (#188)
 * Fix issue where root resource was not being correctly retrieved (#205)
 * Handle case where local policy does not exist
-([#29](https://github.com/awslabs/chalice/issues/29))
+([#29](https://github.com/aws/chalice/issues/29))
 
 ## v0.5.0
 
