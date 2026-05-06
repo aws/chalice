@@ -1,573 +1,753 @@
-# CHANGELOG
+# Changelog
 
 
-## 1.32.0
+## v1.32.0
 
 
-* feature:Python:Add support for Python 3.13 (#2137)
-* feature:Python:Drop support for Python 3.8 (#2138)
+### Features
+* Add support for Python 3.13 (#2137)
+* Drop support for Python 3.8 (#2138)
 
-## 1.31.4
+## v1.31.4
 
 
-* enhancement:Pip:Update pip to the latest version (<25.1)
+### Enhancements
+* Update pip to the latest version (<25.1)
 
-## 1.31.3
+## v1.31.3
 
 
-* enhancement:Pip:Update pip to the latest version (<24.4)
-* enhancement:CLI:Remove distutils warning when packaging/deploying apps (#2123)
+### Enhancements
+* Update pip to the latest version (<24.4)
+* Remove distutils warning when packaging/deploying apps (#2123)
 
-## 1.31.2
+## v1.31.2
 
 
-* enhancement:SQS:Add configuration option for MaximumConcurrency for SQS event source (#2104)
+### Enhancements
+* Add configuration option for MaximumConcurrency for SQS event source (#2104)
 
-## 1.31.1
+## v1.31.1
 
 
-* enhancement:pip:Update pip version to allow 24.0 (#2092)
-* bugfix:tar:Validate tar extraction does not escape destination dir (#1990)
+### Enhancements
+* Update pip version to allow 24.0 (#2092)
 
-## 1.31.0
+### Bug fixes
+* Validate tar extraction does not escape destination dir (#1990)
 
+## v1.31.0
 
-* feature:Python:Add support for Python 3.12 (#2086)
-* enhancement:Python:Drop support for Python 3.7 (#2095)
 
-## 1.30.0
+### Features
+* Add support for Python 3.12 (#2086)
 
+### Enhancements
+* Drop support for Python 3.7 (#2095)
 
-* feature:Python:Add support for Python 3.11 (#2053)
-* enhancement:Pip:Update version dependency on pip (#2080)
+## v1.30.0
 
-## 1.29.0
 
+### Features
+* Add support for Python 3.11 (#2053)
 
-* feature:Python:Add support for Python 3.10 (#2037)
-* enhancement:Pip:Bump pip version range to latest version <23.2 (#2034)
+### Enhancements
+* Update version dependency on pip (#2080)
 
-## 1.28.0
+## v1.29.0
 
 
-* enhancement:Terraform:Update required terraform version to support 1.3 (#2014)
-* enhancement:Pip:Bump pip version range to latest version <22.3 (#2016)
-* feature:Config:Add support for `log_retention_in_days` (#943)
+### Features
+* Add support for Python 3.10 (#2037)
 
-## 1.27.3
+### Enhancements
+* Bump pip version range to latest version <23.2 (#2034)
 
+## v1.28.0
 
-* bugfix:Versioning:Fix version string updates used in the release process (#1971)
 
-## 1.27.2
+### Features
+* Add support for `log_retention_in_days` (#943)
 
+### Enhancements
+* Update required terraform version to support 1.3 (#2014)
+* Bump pip version range to latest version <22.3 (#2016)
 
-* enhancement:Terraform:Update aws provider constraint to allow versions 4.x (#1951)
-* enhancement:event-source:Add attribute for message attributes in SNSEvent and generated test events (#1934)
+## v1.27.3
 
-## 1.27.1
 
+### Bug fixes
+* Fix version string updates used in the release process (#1971)
 
-* enhancement:Pip:Bump pip version range to latest version <22.2 (#1924)
-* enhancement:Websockets:Add support for WebSockets API Terraform packaging (#1670)
+## v1.27.2
 
-## 1.27.0
 
+### Enhancements
+* Update aws provider constraint to allow versions 4.x (#1951)
+* Add attribute for message attributes in SNSEvent and generated test events (#1934)
 
-* bugfix:Local:Set a default timeout when creating the local LambdaContext instance (#1896)
-* feature:CDK:Add support for CDK v2 (#1742)
+## v1.27.1
 
-## 1.26.6
 
+### Enhancements
+* Bump pip version range to latest version <22.2 (#1924)
+* Add support for WebSockets API Terraform packaging (#1670)
 
-* bugfix:pip:Fix RuntimeError with pip v22.x (#1887)
+## v1.27.0
 
-## 1.26.5
 
+### Features
+* Add support for CDK v2 (#1742)
 
-* enhancement:Terraform:Remove template provider in favor of locals (#1869)
-* enhancement:Terraform:Bump Terraform version to suppose 1.1.x (#1868)
+### Bug fixes
+* Set a default timeout when creating the local LambdaContext instance (#1896)
 
-## 1.26.4
+## v1.26.6
 
 
-* bugfix:Terraform:Use updated keywords for providing provider version constraints (#1717)
+### Bug fixes
+* Fix RuntimeError with pip v22.x (#1887)
 
-## 1.26.3
+## v1.26.5
 
 
-* enhancement:Errors:Remove redundant error code in error message string (#1339)
-* enhancement:VPC:Associate VPC endpoint with Rest API (#1449)
+### Enhancements
+* Remove template provider in favor of locals (#1869)
+* Bump Terraform version to suppose 1.1.x (#1868)
 
-## 1.26.2
+## v1.26.4
 
 
-* enhancement:Dependencies:Update pyyaml to 6.x (#1830)
-* bugfix:Websocket:Correctly configure websocket endpoint in the aws-cn partition (#1820)
+### Bug fixes
+* Use updated keywords for providing provider version constraints (#1717)
 
-## 1.26.1
+## v1.26.3
 
 
-* enhancement:Dependencies:Bump pip dependency to latest released version (#1817)
-* enhancement:Tests:Don't include tests package in .whl file (#1814)
+### Enhancements
+* Remove redundant error code in error message string (#1339)
+* Associate VPC endpoint with Rest API (#1449)
 
-## 1.26.0
+## v1.26.2
 
 
-* feature:Websockets:Add support for setting the Websocket protocol from the connect handler (#1768)
-* feature:SQS:Added MaximumBatchingWindowInSeconds to SQS event handler (#1778)
+### Enhancements
+* Update pyyaml to 6.x (#1830)
 
-## 1.25.0
+### Bug fixes
+* Correctly configure websocket endpoint in the aws-cn partition (#1820)
 
+## v1.26.1
 
-* feature:Python:Add support for Python 3.9 (#1787)
 
-## 1.24.2
+### Enhancements
+* Bump pip dependency to latest released version (#1817)
+* Don't include tests package in .whl file (#1814)
 
+## v1.26.0
 
-* enhancement:Dependencies:Bump attrs dependency to latest version (#1786)
-* bugfix:Auth:Fix ARN parsing when generating a builtin AuthResponse (#1775)
-* enhancement:CLI:Upgrade Click dependency to support v8.0.0 (#1729)
 
-## 1.24.1
+### Features
+* Add support for setting the Websocket protocol from the connect handler (#1768)
+* Added MaximumBatchingWindowInSeconds to SQS event handler (#1778)
 
+## v1.25.0
 
-* bugfix:GovCloud:Fix partition error when updating API Gateway in GovCloud region (#1770)
 
-## 1.24.0
+### Features
+* Add support for Python 3.9 (#1787)
 
+## v1.24.2
 
-* feature:Python2.7:Remove support for Python 2.7 (#1766)
-* enhancement:Terraform:Update Terraform packaging to support version 1.0 (#1757)
-* enhancement:Typing:Add missing WebsocketEvent type information (#1746)
-* enhancement:S3 events:Add source account to Lambda permissions when configuring S3 events (#1635)
-* enhancement:Packaging:Add support for Terraform v0.15 (#1725)
 
-## 1.23.0
+### Enhancements
+* Bump attrs dependency to latest version (#1786)
+* Upgrade Click dependency to support v8.0.0 (#1729)
 
+### Bug fixes
+* Fix ARN parsing when generating a builtin AuthResponse (#1775)
 
-* enhancement:Deploy:Wait for function state to be active when deploying
-* feature:SQS:Add queue_arn parameter to enable CDK integration with SQS event handler (#1681)
+## v1.24.1
 
-## 1.22.4
 
+### Bug fixes
+* Fix partition error when updating API Gateway in GovCloud region (#1770)
 
-* enhancement:Types:Add missing types to app.pyi stub file (#1701)
-* bugfix:Custom Domain:Fix custom domain generation when using the CDK (#1640)
-* bugfix:Packaging:Special cases pyrsistent packaging (#1696)
+## v1.24.0
 
-## 1.22.3
 
+### Features
+* Remove support for Python 2.7 (#1766)
 
-* enhancement:Terraform:Bump Terraform version to include 0.14
-* bugfix:Typing:Fix type definitions in app.pyi (#1676)
-* bugfix:Terraform:Use references instead of function names in Terraform packaging (#1558)
+### Enhancements
+* Update Terraform packaging to support version 1.0 (#1757)
+* Add missing WebsocketEvent type information (#1746)
+* Add source account to Lambda permissions when configuring S3 events (#1635)
+* Add support for Terraform v0.15 (#1725)
 
-## 1.22.2
+## v1.23.0
 
 
-* enhancement:Blueprint:Add log property to blueprint
-* bugfix:Pipeline:Fix build command in pipeline generation (#1653)
-* enhancement:Dependencies:Change enum-compat dependency to enum34 with version restrictions (#1667)
+### Features
+* Add queue_arn parameter to enable CDK integration with SQS event handler (#1681)
 
-## 1.22.1
+### Enhancements
+* Wait for function state to be active when deploying
 
+## v1.22.4
 
-* enhancement:Pip:Bump pip version range to latest version 21.x (#1630)
-* enhancement:IAM:Improve client call collection when generation policies (#692)
 
-## 1.22.0
+### Enhancements
+* Add missing types to app.pyi stub file (#1701)
 
+### Bug fixes
+* Fix custom domain generation when using the CDK (#1640)
+* Special cases pyrsistent packaging (#1696)
 
-* feature:CDK:Add built-in support for the AWS CDK (#1622)
+## v1.22.3
 
-## 1.21.9
 
+### Enhancements
+* Bump Terraform version to include 0.14
 
-* enhancement:Dependencies:Bump attr version constraint (#1620)
+### Bug fixes
+* Fix type definitions in app.pyi (#1676)
+* Use references instead of function names in Terraform packaging (#1558)
 
-## 1.21.8
+## v1.22.2
 
 
-* enhancement:Authorizers:Add support for custom headers in built-in authorizers (#1613)
+### Enhancements
+* Add log property to blueprint
+* Change enum-compat dependency to enum34 with version restrictions (#1667)
 
-## 1.21.7
+### Bug fixes
+* Fix build command in pipeline generation (#1653)
 
+## v1.22.1
 
-* enhancement:Terraform:Map custom domain outputs in Terraform packaging (#1601)
 
-## 1.21.6
+### Enhancements
+* Bump pip version range to latest version 21.x (#1630)
+* Improve client call collection when generation policies (#692)
 
+## v1.22.0
 
-* enhancement:Packaging:Increase upper bound for AWS provider in Terraform to 3.x (#1596)
-* enhancement:Packaging:Add support for manylinux2014 wheels (#1551)
 
-## 1.21.5
+### Features
+* Add built-in support for the AWS CDK (#1622)
 
+## v1.21.9
 
-* bugfix:Config:Fix config validation for env vars on py27 (#1573)
-* bugfix:Pip:Bump pip version contraint (#1590)
-* bugfix:REST:Add Allow header with list of allowed methods when returning 405 error (#1583)
 
-## 1.21.4
+### Enhancements
+* Bump attr version constraint (#1620)
 
+## v1.21.8
 
-* enhancement:Local:Allow custom Chalice class in local mode (#1502)
-* bugfix:Layers:Ensure single reference to managed layer (#1563)
 
-## 1.21.3
+### Enhancements
+* Add support for custom headers in built-in authorizers (#1613)
 
+## v1.21.7
 
-* enhancement:Test:Add test client methods for generating sample kinesis events
-* enhancement:Config:Validate env var values are strings (#1543)
 
-## 1.21.2
+### Enhancements
+* Map custom domain outputs in Terraform packaging (#1601)
 
+## v1.21.6
 
-* bugfix:Terraform:Fix issue with wildcard partition names in s3 event handlers (#1508)
-* bugfix:Auth:Fix special case processing for root URL auth (#1271)
-* enhancement:Middleware:Add support for HTTP middleware catching exceptions (#1541)
 
-## 1.21.1
+### Enhancements
+* Increase upper bound for AWS provider in Terraform to 3.x (#1596)
+* Add support for manylinux2014 wheels (#1551)
 
+## v1.21.5
 
-* bugfix:Websockets:Fix custom domain name configuration for websockets (#1531)
-* bugfix:Local:Add support for multiple actions in builtin auth in local mode (#1527)
-* bugfix:Websocket:Fix websocket client configuration when using a custom domain (#1503)
-* bugfix:Local:Fix CORs handling in local mode (#761)
 
-## 1.21.0
+### Bug fixes
+* Fix config validation for env vars on py27 (#1573)
+* Bump pip version contraint (#1590)
+* Add Allow header with list of allowed methods when returning 405 error (#1583)
 
+## v1.21.4
 
-* bugfix:Blueprints:Fix regression when invoking Lambda functions from blueprints (#1535)
-* feature:Events:Add support for Kinesis and DynamoDB event handlers (#987)
 
-## 1.20.1
+### Enhancements
+* Allow custom Chalice class in local mode (#1502)
 
+### Bug fixes
+* Ensure single reference to managed layer (#1563)
 
-* bugfix:Blueprints:Preserve docstring in blueprints (#1525)
-* enhancement:Binary:Support returning native python types when using `*/*` for binary types (#1501)
+## v1.21.3
 
-## 1.20.0
 
+### Enhancements
+* Add test client methods for generating sample kinesis events
+* Validate env var values are strings (#1543)
 
-* enhancement:Blueprints:Add `current_app` property to Blueprints (#1094)
-* enhancement:CLI:Set `AWS_CHALICE_CLI_MODE` env var whenever a Chalice CLI command is run (#1200)
-* feature:Middleware:Add support for middleware (#1509)
-* feature:X-Ray:Add support for AWS X-Ray (#464)
+## v1.21.2
 
-## 1.19.0
 
+### Enhancements
+* Add support for HTTP middleware catching exceptions (#1541)
 
-* feature:Pipeline:Add a new v2 template for the deployment pipeline CloudFormation template (#1506)
+### Bug fixes
+* Fix issue with wildcard partition names in s3 event handlers (#1508)
+* Fix special case processing for root URL auth (#1271)
 
-## 1.18.1
+## v1.21.1
 
 
-* bugfix:Packaging:Add fallback to retrieve name/version from sdist (#1486)
-* bugfix:Analyzer:Handle symbols with multiple (shadowed) namespaces (#1494)
+### Bug fixes
+* Fix custom domain name configuration for websockets (#1531)
+* Add support for multiple actions in builtin auth in local mode (#1527)
+* Fix websocket client configuration when using a custom domain (#1503)
+* Fix CORs handling in local mode (#761)
 
-## 1.18.0
+## v1.21.0
 
 
-* feature:Packaging:Add support for automatic layer creation (#1485, #1001)
+### Features
+* Add support for Kinesis and DynamoDB event handlers (#987)
 
-## 1.17.0
+### Bug fixes
+* Fix regression when invoking Lambda functions from blueprints (#1535)
 
+## v1.20.1
 
-* feature:Testing:Add Chalice test client (#1468)
-* enhancement:regions:Add support for non `aws` partitions including aws-cn and aws-us-gov (#792).
-* bugfix:dependencies:Fix error when using old versions of click by requiring >=7
-* bugfix:local:Fix local mode builtin authorizer not stripping query string from URL (#1470)
 
-## 1.16.0
+### Enhancements
+* Support returning native python types when using `*/*` for binary types (#1501)
 
+### Bug fixes
+* Preserve docstring in blueprints (#1525)
 
-* enhancement:local:Avoid error from cognito client credentials in local authorizer (#1447)
-* bugfix:package:Traverse symlinks to directories when packaging the vendor directory (#583).
-* feature:DomainName:Add support for custom domain names to REST/WebSocket APIs (#1194)
-* feature:auth:Add support for oauth scopes on routes (#1444).
+## v1.20.0
 
-## 1.15.1
 
+### Features
+* Add support for middleware (#1509)
+* Add support for AWS X-Ray (#464)
 
-* bugfix:packaging:Fix setup.py dependencies where the wheel package was not being installed (#1435)
+### Enhancements
+* Add `current_app` property to Blueprints (#1094)
+* Set `AWS_CHALICE_CLI_MODE` env var whenever a Chalice CLI command is run (#1200)
 
-## 1.15.0
+## v1.19.0
 
 
-* feature:blueprints:Mark blueprints as an accepted API (#1250)
-* feature:package:Add ability to generate and merge yaml CloudFormation templates (#1425)
-* enhancement:terraform:Allow generated terraform template to be used as a terraform module (#1300)
-* feature:logs:Add support for tailing logs (#4).
+### Features
+* Add a new v2 template for the deployment pipeline CloudFormation template (#1506)
 
-## 1.14.1
+## v1.18.1
 
 
-* enhancement:pip:Update pip version range to 20.1.
+### Bug fixes
+* Add fallback to retrieve name/version from sdist (#1486)
+* Handle symbols with multiple (shadowed) namespaces (#1494)
 
-## 1.14.0
+## v1.18.0
 
 
-* bugfix:packaging:Fix pandas packaging regression (#1398)
-* feature:CLI:Add ``dev plan/appgraph`` commands (#1396)
-* enhancement:SQS:Validate queue name is used and not queue URL or ARN (#1388)
+### Features
+* Add support for automatic layer creation (#1485, #1001)
 
-## 1.13.1
+## v1.17.0
 
 
-* enhancement:local:Add support for multiValueHeaders in local mode (#1381).
-* bugfix:local:Make ``current_request`` thread safe in local mode (#759)
-* enhancement:local:Add support for cognito in local mode (#1377).
-* bugfix:packaging:Fix terraform generation when injecting custom domains (#1237)
-* enhancement:packaging:Ensure repeatable zip file generation (#1114).
-* bugfix:CORS:Fix CORS request when returning compressed binary types (#1336)
+### Features
+* Add Chalice test client (#1468)
 
-## 1.13.0
+### Enhancements
+* Add support for non `aws` partitions including aws-cn and aws-us-gov (#792).
 
+### Bug fixes
+* Fix error when using old versions of click by requiring >=7
+* Fix local mode builtin authorizer not stripping query string from URL (#1470)
 
-* bugfix:logs:Fix error for ``chalice logs`` when a Lambda function
+## v1.16.0
+
+
+### Features
+* Add support for custom domain names to REST/WebSocket APIs (#1194)
+* Add support for oauth scopes on routes (#1444).
+
+### Enhancements
+* Avoid error from cognito client credentials in local authorizer (#1447)
+
+### Bug fixes
+* Traverse symlinks to directories when packaging the vendor directory (#583).
+
+## v1.15.1
+
+
+### Bug fixes
+* Fix setup.py dependencies where the wheel package was not being installed (#1435)
+
+## v1.15.0
+
+
+### Features
+* Mark blueprints as an accepted API (#1250)
+* Add ability to generate and merge yaml CloudFormation templates (#1425)
+* Add support for tailing logs (#4).
+
+### Enhancements
+* Allow generated terraform template to be used as a terraform module (#1300)
+
+## v1.14.1
+
+
+### Enhancements
+* Update pip version range to 20.1.
+
+## v1.14.0
+
+
+### Features
+* Add ``dev plan/appgraph`` commands (#1396)
+
+### Enhancements
+* Validate queue name is used and not queue URL or ARN (#1388)
+
+### Bug fixes
+* Fix pandas packaging regression (#1398)
+
+## v1.13.1
+
+
+### Enhancements
+* Add support for multiValueHeaders in local mode (#1381).
+* Add support for cognito in local mode (#1377).
+* Ensure repeatable zip file generation (#1114).
+
+### Bug fixes
+* Make ``current_request`` thread safe in local mode (#759)
+* Fix terraform generation when injecting custom domains (#1237)
+* Fix CORS request when returning compressed binary types (#1336)
+
+## v1.13.0
+
+
+### Features
+* Add global CORS configuration (#70)
+* Add support for Python 3.8 (#1315)
+* Add support for invocation role in custom authorizer (#1303)
+
+### Bug fixes
+* Fix error for ``chalice logs`` when a Lambda function
 has not been invoked (#1252)
-* feature:CORS:Add global CORS configuration (#70)
-* bugfix:packaging:Fix packaging simplejson (#1304)
-* feature:python:Add support for Python 3.8 (#1315)
-* feature:authorizer:Add support for invocation role in custom authorizer (#1303)
-* bugfix:packaging:Fix packaging on case-sensitive filesystems (#1356)
+* Fix packaging simplejson (#1304)
+* Fix packaging on case-sensitive filesystems (#1356)
 
-## 1.12.0
+## v1.12.0
 
 
-* feature:CLI:Add ``generate-models`` command (#1245)
-* enhancement:websocket:Add ``close`` and ``info`` commands to websocket api (#1259)
-* enhancement:dependencies:Bump upper bound on PIP to ``<19.4`` (#1273, #1272)
+### Features
+* Add ``generate-models`` command (#1245)
 
-## 1.11.1
+### Enhancements
+* Add ``close`` and ``info`` commands to websocket api (#1259)
+* Bump upper bound on PIP to ``<19.4`` (#1273, #1272)
 
-
-* bugfix:blueprint:Fix mouting blueprints with root routes (#1230)
-* feature:rest-api:Add support for multi-value headers responses (#1205)
-
-## 1.11.0
+## v1.11.1
 
 
-* feature:config:Add support for stage independent lambda configuration (#1162)
-* feature:event-source:Add support for subscribing to CloudWatch Events (#1126)
-* feature:event-source:Add a ``description`` argument to CloudWatch schedule events (#1155)
-* bugfix:rest-api:Fix deployment of API Gateway resource policies (#1220)
+### Features
+* Add support for multi-value headers responses (#1205)
 
-## 1.10.0
+### Bug fixes
+* Fix mouting blueprints with root routes (#1230)
 
-
-* feature:websocket:Add experimental support for websockets (#1017)
-* feature:rest-api:API Gateway Endpoint Type Configuration (#1160)
-* feature:rest-api:API Gateway Resource Policy Configuration (#1160)
-* feature:packaging:Add --merge-template option to package command (#1195)
-* feature:packaging:Add support for packaging via terraform (#1129)
-
-## 1.9.1
+## v1.11.0
 
 
-* enhancement:rest-api:Make MultiDict mutable (#1158)
+### Features
+* Add support for stage independent lambda configuration (#1162)
+* Add support for subscribing to CloudWatch Events (#1126)
+* Add a ``description`` argument to CloudWatch schedule events (#1155)
 
-## 1.9.0
+### Bug fixes
+* Fix deployment of API Gateway resource policies (#1220)
+
+## v1.10.0
 
 
-* enhancement:dependencies:Update PIP to support up to 19.1.x (#1104)
-* bugfix:rest-api:Fix handling of more complex Accept headers for binary
-content types (#1078)
-* enhancement:rest-api:Raise TypeError when trying to serialize an unserializable
+### Features
+* Add experimental support for websockets (#1017)
+* API Gateway Endpoint Type Configuration (#1160)
+* API Gateway Resource Policy Configuration (#1160)
+* Add --merge-template option to package command (#1195)
+* Add support for packaging via terraform (#1129)
+
+## v1.9.1
+
+
+### Enhancements
+* Make MultiDict mutable (#1158)
+
+## v1.9.0
+
+
+### Features
+* Support repeating values in the query string (#1131)
+* Add layer support to chalice package (#1130)
+
+### Enhancements
+* Update PIP to support up to 19.1.x (#1104)
+* Raise TypeError when trying to serialize an unserializable
 type (#1100)
-* enhancement:policy:Update ``policies.json`` file (#1110)
-* feature:rest-api:Support repeating values in the query string (#1131)
-* feature:packaging:Add layer support to chalice package (#1130)
-* bugfix:rest-api:Fix bug with route ``name`` kwarg raising a ``TypeError`` (#1112)
-* enhancement:logging:Change exceptions to always be logged at the ERROR level (#969)
-* bugfix:CLI:Fix bug handling exceptions during ``chalice invoke`` on
-Python 3.7 (#1139)
-* bugfix:rest-api:Add support for API Gateway compression (#672)
-* enhancement:packaging:Add support for both relative and absolute paths for
+* Update ``policies.json`` file (#1110)
+* Change exceptions to always be logged at the ERROR level (#969)
+* Add support for both relative and absolute paths for
 ``--package-dir`` (#940)
 
-## 1.8.0
+### Bug fixes
+* Fix handling of more complex Accept headers for binary
+content types (#1078)
+* Fix bug with route ``name`` kwarg raising a ``TypeError`` (#1112)
+* Fix bug handling exceptions during ``chalice invoke`` on
+Python 3.7 (#1139)
+* Add support for API Gateway compression (#672)
+
+## v1.8.0
 
 
-* bugfix:packaging:Fall back to pure python version of yaml parser
+### Features
+* Add support for Lambda layers. (#1001)
+
+### Bug fixes
+* Fall back to pure python version of yaml parser
 when unable to compile C bindings for PyYAML (#1074)
-* feature:packaging:Add support for Lambda layers. (#1001)
 
-## 1.7.0
-
-
-* bugfix:packaging:Fix packaging multiple local directories as dependencies (#1047)
-* feature:event-source:Add support for passing SNS ARNs to ``on_sns_message`` (#1048)
-* feature:blueprint:Add support for Blueprints (#1023)
-* feature:config:Add support for opting-in to experimental features (#1053)
-* feature:event-source:Provide Lambda context in event object (#856)
-
-## 1.6.2
+## v1.7.0
 
 
-* enhancement:dependencies:Add support for pip 18.2 (#991)
-* enhancement:logging:Add more detailed debug logs to the packager. (#934)
-* feature:python:Add support for python3.7 (#992)
-* feature:rest-api:Support bytes for the application/json binary type (#988)
-* enhancement:rest-api:Use more compact JSON representation by default for dicts (#958)
-* enhancement:logging:Log internal exceptions as errors (#254)
-* feature:rest-api:Generate swagger documentation from docstrings (#574)
+### Features
+* Add support for passing SNS ARNs to ``on_sns_message`` (#1048)
+* Add support for Blueprints (#1023)
+* Add support for opting-in to experimental features (#1053)
+* Provide Lambda context in event object (#856)
 
-## 1.6.1
+### Bug fixes
+* Fix packaging multiple local directories as dependencies (#1047)
+
+## v1.6.2
 
 
-* bugfix:local:Fix local mode issue with unicode responses and Content-Length (#910)
-* enhancement:dev:Fix issue with ``requirements-dev.txt`` not setting up a working
+### Features
+* Add support for python3.7 (#992)
+* Support bytes for the application/json binary type (#988)
+* Generate swagger documentation from docstrings (#574)
+
+### Enhancements
+* Add support for pip 18.2 (#991)
+* Add more detailed debug logs to the packager. (#934)
+* Use more compact JSON representation by default for dicts (#958)
+* Log internal exceptions as errors (#254)
+
+## v1.6.1
+
+
+### Enhancements
+* Fix issue with ``requirements-dev.txt`` not setting up a working
 dev environment (#920)
-* enhancement:dependencies:Add support for pip 18 (#910)
+* Add support for pip 18 (#910)
 
-## 1.6.0
+### Bug fixes
+* Fix local mode issue with unicode responses and Content-Length (#910)
 
-
-* feature:CLI:Add ``chalice invoke`` command (#900)
-
-## 1.5.0
+## v1.6.0
 
 
-* feature:policy:Add support for S3 upload_file/download_file in
+### Features
+* Add ``chalice invoke`` command (#900)
+
+## v1.5.0
+
+
+### Features
+* Add support for S3 upload_file/download_file in
 policy generator (#889)
 
-## 1.4.0
+## v1.4.0
 
 
-* enhancement:CI-CD:Add support for generating python 3.6 pipelines (#858)
-* feature:event-source:Add support for connecting lambda functions to S3 events (#855)
-* feature:event-source:Add support for connecting lambda functions to SNS message (#488)
-* enhancement:local:Make ``watchdog`` an optional dependency and add a built in
+### Features
+* Add support for connecting lambda functions to S3 events (#855)
+* Add support for connecting lambda functions to SNS message (#488)
+* Add support for connecting lambda functions to an SQS queue (#884)
+
+### Enhancements
+* Add support for generating python 3.6 pipelines (#858)
+* Make ``watchdog`` an optional dependency and add a built in
 ``stat()`` based file poller (#867)
-* feature:event-source:Add support for connecting lambda functions to an SQS queue (#884)
 
-## 1.3.0
+## v1.3.0
 
 
-* feature:config:Add support for Lambdas in a VPC (#413, #837, #673)
-* feature:packaging:Add support for packaging local directories (#653)
-* enhancement:local:Add support for automatically reloading the local
+### Features
+* Add support for Lambdas in a VPC (#413, #837, #673)
+* Add support for packaging local directories (#653)
+
+### Enhancements
+* Add support for automatically reloading the local
 dev server when files are modified (#316, #846, #706)
-* enhancement:logging:Add support for viewing cloudwatch logs of all
+* Add support for viewing cloudwatch logs of all
 lambda functions (#841, #849)
 
-## 1.2.3
+## v1.2.3
 
 
-* enhancement:dependency:Add support for pip 10 (#808)
-* enhancement:policy:Update ``policies.json`` file (#817)
+### Enhancements
+* Add support for pip 10 (#808)
+* Update ``policies.json`` file (#817)
 
-## 1.2.2
-
-
-* bugfix:packaging:Fix package command not correctly setting environment variables (#795)
-
-## 1.2.1
+## v1.2.2
 
 
-* enhancement:rest-api:Add CORS headers to error response (#715)
-* bugfix:local:Fix parsing empty query strings in local mode (#767)
-* bugfix:packaging:Fix regression in ``chalice package`` when using role arns (#793)
+### Bug fixes
+* Fix package command not correctly setting environment variables (#795)
 
-## 1.2.0
+## v1.2.1
+
+
+### Enhancements
+* Add CORS headers to error response (#715)
+
+### Bug fixes
+* Fix parsing empty query strings in local mode (#767)
+* Fix regression in ``chalice package`` when using role arns (#793)
+
+## v1.2.0
 
 This release features a rewrite of the core deployment
 code used in Chalice.  This is a backwards compatible change
 for users, but you may see changes to the autogenerated
 files Chalice creates.
-Please read the `upgrade notes for 1.2.0
-<http://chalice.readthedocs.io/en/latest/upgrading.html#v1-2-0>`__
+Please read the [upgrade notes for 1.2.0](https://aws.github.io/chalice/upgrading#v1-2-0)
 for more detailed information about upgrading to this release.
 
 
 
-* enhancement:rest-api:Print out full stack trace when an error occurs (#711)
-* enhancement:rest-api:Add ``image/jpeg`` as a default binary content type (#707)
-* feature:event-source:Add support for AWS Lambda only projects (#162, #640)
-* bugfix:policy:Fix inconsistent IAM role generation with pure lambdas (#685)
-* enhancement:deployment:Rewrite Chalice deployer to more easily support additional AWS resources (#604)
-* feature:packaging:Update the ``chalice package`` command to support
+### Features
+* Add support for AWS Lambda only projects (#162, #640)
+* Update the ``chalice package`` command to support
 pure lambda functions and scheduled events. (#772)
-* bugfix:packaging:Fix packager edge case normalizing sdist names (#778)
-* bugfix:packaging:Fix SQLAlchemy packaging (#778)
-* bugfix:packaging:Fix packaging abi3, wheels this fixes cryptography 2.2.x packaging (#764)
 
-## 1.1.1
+### Enhancements
+* Print out full stack trace when an error occurs (#711)
+* Add ``image/jpeg`` as a default binary content type (#707)
+* Rewrite Chalice deployer to more easily support additional AWS resources (#604)
+
+### Bug fixes
+* Fix inconsistent IAM role generation with pure lambdas (#685)
+* Fix packager edge case normalizing sdist names (#778)
+* Fix SQLAlchemy packaging (#778)
+* Fix packaging abi3, wheels this fixes cryptography 2.2.x packaging (#764)
+
+## v1.1.1
 
 
-* feature:CLI:Add ``--connection-timeout`` to the ``deploy`` command (#344)
-* bugfix:policy:Fix IAM role creation issue (#565)
-* bugfix:local:Fix `chalice local` handling of browser requests (#565)
-* enhancement:policy:Support async/await syntax in automatic policy generation (#565)
-* enhancement:packaging:Support additional PyPi package formats (.tar.bz2) (#720)
+### Features
+* Add ``--connection-timeout`` to the ``deploy`` command (#344)
 
-## 1.1.0
+### Enhancements
+* Support async/await syntax in automatic policy generation (#565)
+* Support additional PyPi package formats (.tar.bz2) (#720)
+
+### Bug fixes
+* Fix IAM role creation issue (#565)
+* Fix `chalice local` handling of browser requests (#565)
+
+## v1.1.0
 
 
-* enhancement:rest-api:Default to ``None`` in local mode when no query parameters
-are provided (#593)
-* enhancement:local:Add support for binding a custom address for local dev server (#596)
-* bugfix:rest-api:Fix local mode handling of routes with trailing slashes (#582)
-* bugfix:config:Scale ``lambda_timeout`` parameter correctly in local mode (#579)
-* feature:CI-CD:Add ``--codebuild-image`` to the ``generate-pipeline`` command (#609)
-* feature:CI-CD:Add ``--source`` and ``--buildspec-file`` to the
+### Features
+* Add ``--codebuild-image`` to the ``generate-pipeline`` command (#609)
+* Add ``--source`` and ``--buildspec-file`` to the
 ``generate-pipeline`` command (#609)
 
-## 1.0.4
+### Enhancements
+* Default to ``None`` in local mode when no query parameters
+are provided (#593)
+* Add support for binding a custom address for local dev server (#596)
+
+### Bug fixes
+* Fix local mode handling of routes with trailing slashes (#582)
+* Scale ``lambda_timeout`` parameter correctly in local mode (#579)
+
+## v1.0.4
 
 
-* bugfix:packaging:Fix issue deploying some packages in Windows with utf-8 characters (#560)
-* feature:packaging:Add support for custom authorizers with ``chalice package`` (#580)
+### Features
+* Add support for custom authorizers with ``chalice package`` (#580)
 
-## 1.0.3
+### Bug fixes
+* Fix issue deploying some packages in Windows with utf-8 characters (#560)
+
+## v1.0.3
 
 
-* bugfix:packaging:Fix issue with some packages with `-` or `.` in their distribution name (#555)
-* bugfix:rest-api:Fix issue where chalice local returned a 403 for successful OPTIONS requests (#554)
-* bugfix:local:Fix issue with chalice local mode causing http clients to hang on responses
+### Enhancements
+* Add ``--stage`` parameter to ``chalice local`` (#545)
+
+### Bug fixes
+* Fix issue with some packages with `-` or `.` in their distribution name (#555)
+* Fix issue where chalice local returned a 403 for successful OPTIONS requests (#554)
+* Fix issue with chalice local mode causing http clients to hang on responses
 with no body (#525)
-* enhancement:local:Add ``--stage`` parameter to ``chalice local`` (#545)
-* bugfix:policy:Fix issue with analyzer that followed recursive functions infinitely (#531)
+* Fix issue with analyzer that followed recursive functions infinitely (#531)
 
-## 1.0.2
+## v1.0.2
 
 
-* bugfix:rest-api:Fix issue where requestParameters were not being mapped
+### Features
+* Add support for Builtin Authorizers in local mode (#404)
+
+### Enhancements
+* Allow view to require API keys as well as authorization (#473)
+
+### Bug fixes
+* Fix issue where requestParameters were not being mapped
 correctly resulting in invalid generated javascript SDKs (#498)
-* bugfix:rest-api:Fix issue where ``api_gateway_stage`` was being
+* Fix issue where ``api_gateway_stage`` was being
 ignored when set in the ``config.json`` file (#495)
-* bugfix:rest-api:Fix bug where ``raw_body`` would raise an exception if no HTTP
+* Fix bug where ``raw_body`` would raise an exception if no HTTP
 body was provided (#503)
-* bugfix:CLI:Fix bug where exit codes were not properly being propagated during packaging (#500)
-* feature:local:Add support for Builtin Authorizers in local mode (#404)
-* bugfix:packaging:Fix environment variables being passed to subprocess while packaging (#501)
-* enhancement:rest-api:Allow view to require API keys as well as authorization (#473)
+* Fix bug where exit codes were not properly being propagated during packaging (#500)
+* Fix environment variables being passed to subprocess while packaging (#501)
 
-## 1.0.1
+## v1.0.1
 
 
-* bugfix:packaging:Only use alphanumeric characters for event names in SAM template (#450)
-* enhancement:config:Print useful error message when config.json is invalid (#458)
-* bugfix:rest-api:Fix api gateway stage being set incorrectly in non-default chalice stage
-(`#$70 <https://github.com/aws/chalice/issues/470>`__)
+### Enhancements
+* Print useful error message when config.json is invalid (#458)
 
-## 1.0.0
+### Bug fixes
+* Only use alphanumeric characters for event names in SAM template (#450)
+* Fix api gateway stage being set incorrectly in non-default chalice stage
+([#470](https://github.com/aws/chalice/issues/470))
+
+## v1.0.0
 
 
-* enhancement:rest-api:Change default API Gateway stage name to ``api`` (#431)
-* enhancement:local:Add support for ``CORSConfig`` in ``chalice local`` (#436)
-* enhancement:logging:Propagate ``DEBUG`` log level when setting ``app.debug`` (#386)
-* feature:rest-api:Add support for wildcard routes and HTTP methods in ``AuthResponse`` (#403)
-* bugfix:policy:Fix bug when analyzing list comprehensions (#412)
-* enhancement:local:Update ``chalice local`` to use HTTP 1.1 (#448)
+### Features
+* Add support for wildcard routes and HTTP methods in ``AuthResponse`` (#403)
 
-## 1.0.0b2
+### Enhancements
+* Change default API Gateway stage name to ``api`` (#431)
+* Add support for ``CORSConfig`` in ``chalice local`` (#436)
+* Propagate ``DEBUG`` log level when setting ``app.debug`` (#386)
+* Update ``chalice local`` to use HTTP 1.1 (#448)
 
-Please read the `upgrade notes for 1.0.0b2
-<http://chalice.readthedocs.io/en/latest/upgrading.html#v1-0-0b2>`__
+### Bug fixes
+* Fix bug when analyzing list comprehensions (#412)
+
+## v1.0.0b2
+
+Please read the [upgrade notes for 1.0.0b2](https://aws.github.io/chalice/upgrading#b2)
 for more detailed information about upgrading to this release.
 
 Note: to install this beta version of chalice you must specify
@@ -575,19 +755,21 @@ Note: to install this beta version of chalice you must specify
 use the ``--pre`` flag for pip: ``pip install --pre chalice``.
 
 
-* enhancement:local:Set env vars from config in ``chalice local`` (#396)
-* bugfix:packaging:Fix edge case when building packages with optional c extensions (#421)
-* enhancement:policy:Remove legacy ``policy.json`` file support. Policy files must
+### Enhancements
+* Set env vars from config in ``chalice local`` (#396)
+* Remove legacy ``policy.json`` file support. Policy files must
 use the stage name, e.g. ``policy-dev.json`` (#430)
-* bugfix:deployment:Fix issue where IAM role policies were updated twice on redeploys (#428)
-* enhancement:rest-api:Validate route path is not an empty string (#432)
-* enhancement:rest-api:Change route code to invoke view function with kwargs instead of
+* Validate route path is not an empty string (#432)
+* Change route code to invoke view function with kwargs instead of
 positional args (#429)
 
-## 1.0.0b1
+### Bug fixes
+* Fix edge case when building packages with optional c extensions (#421)
+* Fix issue where IAM role policies were updated twice on redeploys (#428)
 
-Please read the `upgrade notes for 1.0.0b1
-<http://chalice.readthedocs.io/en/latest/upgrading.html#v1-0-0b1>`__
+## v1.0.0b1
+
+Please read the [upgrade notes for 1.0.0b1](https://aws.github.io/chalice/upgrading#b1)
 for more detailed information about upgrading to this release.
 
 Note: to install this beta version of chalice you must specify
@@ -596,153 +778,197 @@ use the ``--pre`` flag for pip: ``pip install --pre chalice``.
 
 
 
-* bugfix:rest-api:Fix unicode responses being quoted in python 2.7 (#262)
-* feature:event-source:Add support for scheduled events (#390)
-* feature:event-source:Add support for pure lambda functions (#390)
-* feature:packaging:Add support for wheel packaging. (#249)
+### Features
+* Add support for scheduled events (#390)
+* Add support for pure lambda functions (#390)
+* Add support for wheel packaging. (#249)
 
-## 0.10.1
+### Bug fixes
+* Fix unicode responses being quoted in python 2.7 (#262)
+
+## v0.10.1
 
 
-* bugfix:deployment:Fix deployment issue for projects deployed with versions
+### Bug fixes
+* Fix deployment issue for projects deployed with versions
 prior to 0.10.0 (#387)
-* bugfix:policy:Fix crash in analyzer when encountering genexprs and listcomps (#263)
+* Fix crash in analyzer when encountering genexprs and listcomps (#263)
 
-## 0.10.0
+## v0.10.0
 
 
-* bugfix:deployment:Fix issue where provided ``iam_role_arn`` was not respected on
+### Features
+* Add support for view functions that share the same view url but
+differ by HTTP method (#81)
+* Add support for built-in authorizers (#356)
+
+### Enhancements
+* Improve deployment error messages for deployment packages that are
+too large (#246, #330, #380)
+
+### Bug fixes
+* Fix issue where provided ``iam_role_arn`` was not respected on
 redeployments of chalice applications and in the CloudFormation template
 generated by ``chalice package`` (#339)
-* bugfix:config:Fix ``autogen_policy`` in config being ignored (#367)
-* feature:rest-api:Add support for view functions that share the same view url but
-differ by HTTP method (#81)
-* enhancement:deployment:Improve deployment error messages for deployment packages that are
-too large (#246, #330, #380)
-* feature:rest-api:Add support for built-in authorizers (#356)
+* Fix ``autogen_policy`` in config being ignored (#367)
 
-## 0.9.0
+## v0.9.0
 
 
-* feature:rest-api:Add support for ``IAM`` authorizer (#334)
-* feature:config:Add support for configuring ``lambda_timeout``, ``lambda_memory_size``,
+### Features
+* Add support for ``IAM`` authorizer (#334)
+* Add support for configuring ``lambda_timeout``, ``lambda_memory_size``,
 and ``tags`` in your AWS Lambda function (#347)
-* bugfix:packaging:Fix vendor directory contents not being importable locally (#350)
-* feature:rest-api:Add support for binary payloads (#348)
+* Add support for binary payloads (#348)
 
-## 0.8.2
+### Bug fixes
+* Fix vendor directory contents not being importable locally (#350)
+
+## v0.8.2
 
 
-* bugfix:CLI:Fix issue where ``--api-gateway-stage`` was being
+### Features
+* Add ``chalice delete`` command (#40)
+
+### Bug fixes
+* Fix issue where ``--api-gateway-stage`` was being
 ignored  (#325)
-* feature:CLI:Add ``chalice delete`` command (#40)
 
-## 0.8.1
-
-
-* enhancement:deployment:Alway overwrite existing API Gateway Rest API on updates (#305)
-* enhancement:CORS:Added more granular support for CORS (#311)
-* bugfix:local:Fix duplicate content type header in local model (#311)
-* bugfix:rest-api:Fix content type validation when charset is provided (#306)
-* enhancement:rest-api:Add back custom authorizer support (#322)
-
-## 0.8.0
+## v0.8.1
 
 
-* feature:python:Add support for python3! (#296)
-* bugfix:packaging:Fix swagger generation when using ``api_key_required=True`` (#279)
-* bugfix:CI-CD:Fix ``generate-pipeline`` to install requirements file before packaging (#295)
+### Enhancements
+* Alway overwrite existing API Gateway Rest API on updates (#305)
+* Added more granular support for CORS (#311)
+* Add back custom authorizer support (#322)
 
-## 0.7.0
+### Bug fixes
+* Fix duplicate content type header in local model (#311)
+* Fix content type validation when charset is provided (#306)
+
+## v0.8.0
 
 
-* feature:CLI:Add ``chalice package`` command.  This will
+### Features
+* Add support for python3! (#296)
+
+### Bug fixes
+* Fix swagger generation when using ``api_key_required=True`` (#279)
+* Fix ``generate-pipeline`` to install requirements file before packaging (#295)
+
+## v0.7.0
+
+
+### Features
+* Add ``chalice package`` command.  This will
 create a SAM template and Lambda deployment package that
 can be subsequently deployed by AWS CloudFormation. (#258)
-* feature:CLI:Add a ``--stage-name`` argument for creating chalice stages.
+* Add a ``--stage-name`` argument for creating chalice stages.
 A chalice stage is a completely separate set of AWS resources.
 As a result, most configuration values can also be specified
 per chalice stage. (#264, #270)
-* feature:policy:Add support for ``iam_role_file``, which allows you to
+* Add support for ``iam_role_file``, which allows you to
 specify the file location of an IAM policy to use for your app (#272)
-* feature:config:Add support for setting environment variables in your app (#273)
-* feature:CI-CD:Add a ``generate-pipeline`` command (#277)
+* Add support for setting environment variables in your app (#273)
+* Add a ``generate-pipeline`` command (#277)
 
-## 0.6.0
+## v0.6.0
 
-Check out the `upgrade notes for 0.6.0
-<http://chalice.readthedocs.io/en/latest/upgrading.html#v0-6-0>`__
+Check out the [upgrade notes for 0.6.0](https://aws.github.io/chalice/upgrading#v0-6-0)
 for more detailed information about changes in this release.
 
 
 
-* feature:local:Add port parameter to local command (#220)
-* feature:packaging:Add support for binary vendored packages (#182, #106, #42)
-* feature:rest-api:Add support for customizing the returned HTTP response (#240, #218, #110, #30, #226)
-* enhancement:packaging:Always inject latest runtime to allow for chalice upgrades (#245)
+### Features
+* Add port parameter to local command (#220)
+* Add support for binary vendored packages (#182, #106, #42)
+* Add support for customizing the returned HTTP response (#240, #218, #110, #30, #226)
 
-## 0.5.1
+### Enhancements
+* Always inject latest runtime to allow for chalice upgrades (#245)
 
-
-* enhancement:local:Add support for serializing decimals in ``chalice local`` (#187)
-* enhancement:local:Add stdout handler for root logger when using ``chalice local`` (#186)
-* enhancement:local:Map query string parameters when using ``chalice local`` (#184)
-* enhancement:rest-api:Support Content-Type with a charset (#180)
-* bugfix:deployment:Fix not all resources being retrieved due to pagination (#188)
-* bugfix:deployment:Fix issue where root resource was not being correctly retrieved (#205)
-* bugfix:deployment:Handle case where local policy does not exist
-(`29 <https://github.com/awslabs/chalice/issues/29>`__)
-
-## 0.5.0
+## v0.5.1
 
 
-* enhancement:logging:Add default application logger (#149)
-* enhancement:local:Return 405 when method is not supported when running
+### Enhancements
+* Add support for serializing decimals in ``chalice local`` (#187)
+* Add stdout handler for root logger when using ``chalice local`` (#186)
+* Map query string parameters when using ``chalice local`` (#184)
+* Support Content-Type with a charset (#180)
+
+### Bug fixes
+* Fix not all resources being retrieved due to pagination (#188)
+* Fix issue where root resource was not being correctly retrieved (#205)
+* Handle case where local policy does not exist
+([#29](https://github.com/aws/chalice/issues/29))
+
+## v0.5.0
+
+
+### Features
+* Add ``chalice url`` command to print the deployed URL (#169)
+* Add support for ``DELETE`` and ``PATCH`` in ``chalice local`` (#167)
+* Add ``chalice generate-sdk`` command (#178)
+
+### Enhancements
+* Add default application logger (#149)
+* Return 405 when method is not supported when running
 ``chalice local`` (#159)
-* enhancement:SDK:Add path params as requestParameters so they can be used
+* Add path params as requestParameters so they can be used
 in generated SDKs as well as cache keys (#163)
-* enhancement:rest-api:Map cognito user pool claims as part of request context (#165)
-* feature:CLI:Add ``chalice url`` command to print the deployed URL (#169)
-* enhancement:deployment:Bump up retry limit on initial function creation to 30 seconds (#172)
-* feature:local:Add support for ``DELETE`` and ``PATCH`` in ``chalice local`` (#167)
-* feature:CLI:Add ``chalice generate-sdk`` command (#178)
+* Map cognito user pool claims as part of request context (#165)
+* Bump up retry limit on initial function creation to 30 seconds (#172)
 
-## 0.4.0
+## v0.4.0
 
 
-* bugfix:deployment:Fix issue where role name to arn lookup was failing due to lack of pagination (#139)
-* enhancement:rest-api:Raise errors when unknown kwargs are provided to ``app.route(...)`` (#144)
-* enhancement:config:Raise validation error when configuring CORS and an OPTIONS method (#142)
-* feature:rest-api:Add support for multi-file applications (#21)
-* feature:local:Add support for ``chalice local``, which runs a local HTTP server for testing (#22)
+### Features
+* Add support for multi-file applications (#21)
+* Add support for ``chalice local``, which runs a local HTTP server for testing (#22)
 
-## 0.3.0
+### Enhancements
+* Raise errors when unknown kwargs are provided to ``app.route(...)`` (#144)
+* Raise validation error when configuring CORS and an OPTIONS method (#142)
 
+### Bug fixes
+* Fix issue where role name to arn lookup was failing due to lack of pagination (#139)
 
-* bugfix:rest-api:Fix bug with case insensitive headers (#129)
-* feature:CORS:Add initial support for CORS (#133)
-* enhancement:deployment:Only add API gateway permissions if needed (#48)
-* bugfix:policy:Fix error when dict comprehension is encountered during policy generation (#131)
-* enhancement:CLI:Add ``--version`` and ``--debug`` options to the chalice CLI
-
-## 0.2.0
+## v0.3.0
 
 
-* enhancement:rest-api:Add support for input content types besides ``application/json`` (#96)
-* enhancement:rest-api:Allow ``ChaliceViewErrors`` to propagate, so that API Gateway
+### Features
+* Add initial support for CORS (#133)
+
+### Enhancements
+* Only add API gateway permissions if needed (#48)
+* Add ``--version`` and ``--debug`` options to the chalice CLI
+
+### Bug fixes
+* Fix bug with case insensitive headers (#129)
+* Fix error when dict comprehension is encountered during policy generation (#131)
+
+## v0.2.0
+
+
+### Enhancements
+* Add support for input content types besides ``application/json`` (#96)
+* Allow ``ChaliceViewErrors`` to propagate, so that API Gateway
 can properly map HTTP status codes in non debug mode (#113)
-* enhancement:deployment:Add windows compatibility (#31)
+* Add windows compatibility (#31)
 
-## 0.1.0
+## v0.1.0
 
 
-* enhancement:packaging:Require ``virtualenv`` as a package dependency. (#33)
-* enhancement:CLI:Add ``--profile`` option when creating a new project (#28)
-* enhancement:rest-api:Add support for more error codes exceptions (#34)
-* enhancement:rest-api:Improve error validation when routes containing a
+### Features
+* Add support for authenticate routes (#14)
+* Add ability to disable IAM role management (#61)
+
+### Enhancements
+* Require ``virtualenv`` as a package dependency. (#33)
+* Add ``--profile`` option when creating a new project (#28)
+* Add support for more error codes exceptions (#34)
+* Improve error validation when routes containing a
 trailing ``/`` char (#65)
-* enhancement:rest-api:Validate duplicate route entries (#79)
-* enhancement:policy:Ignore lambda expressions in policy analyzer (#74)
-* enhancement:rest-api:Print original error traceback in debug mode (#50)
-* feature:rest-api:Add support for authenticate routes (#14)
-* feature:policy:Add ability to disable IAM role management (#61)
+* Validate duplicate route entries (#79)
+* Ignore lambda expressions in policy analyzer (#74)
+* Print original error traceback in debug mode (#50)
