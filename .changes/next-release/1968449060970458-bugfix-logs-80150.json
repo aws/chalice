@@ -1,5 +1,0 @@
-{
-  "type": "bugfix",
-  "category": "logs",
-  "description": "Respect the `--since` option when retrieving logs without `--follow`."
-}

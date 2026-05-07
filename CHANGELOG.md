@@ -1,6 +1,19 @@
 # Changelog
 
 
+## v1.33.0
+
+
+### Features
+* Drop support for Python 3.9 ([#2162](https://github.com/aws/chalice/pull/2162))
+* Add support for Python 3.14 ([#2163](https://github.com/aws/chalice/pull/2163))
+
+### Enhancements
+* Update pip to the latest version (<26.2) ([#2163](https://github.com/aws/chalice/pull/2163))
+
+### Bug fixes
+* Respect the `--since` option when retrieving logs without `--follow`.
+
 ## v1.32.0
 
 

@@ -1,0 +1,25 @@
+{
+  "schema-version": "0.2",
+  "changes": [
+    {
+      "type": "feature",
+      "category": "Python",
+      "description": "Drop support for Python 3.9 ([#2162](https://github.com/aws/chalice/pull/2162))"
+    },
+    {
+      "type": "feature",
+      "category": "Python",
+      "description": "Add support for Python 3.14 ([#2163](https://github.com/aws/chalice/pull/2163))"
+    },
+    {
+      "type": "enhancement",
+      "category": "Pip",
+      "description": "Update pip to the latest version (<26.2) ([#2163](https://github.com/aws/chalice/pull/2163))"
+    },
+    {
+      "type": "bugfix",
+      "category": "logs",
+      "description": "Respect the `--since` option when retrieving logs without `--follow`."
+    }
+  ]
+}
