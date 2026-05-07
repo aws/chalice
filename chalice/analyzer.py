@@ -165,7 +165,7 @@ class Boto3ClientMethodCallType(Boto3ClientMethodType):
 
 class TypedSymbol(symtable.Symbol):
     inferred_type = None  # type: Any
-    ast_node = None  # type: ast.AST
+    ast_node = None  # type: Optional[ast.AST]
 
 
 class FunctionType(BaseType):
@@ -308,11 +308,11 @@ class ChainedSymbolTable(object):
         symbol = self._local_table.lookup(name)
         if symbol.is_global():
             symbol = self._global_table.lookup(name)
-        try:
-            return cast(TypedSymbol, symbol).ast_node
-        except AttributeError:
+        ast_node = getattr(cast(TypedSymbol, symbol), 'ast_node', None)
+        if ast_node is None:
             raise ValueError(
                 "No AST node registered for symbol: %s" % name)
+        return ast_node
 
     def has_ast_node_for_symbol(self, name):
         # type: (str) -> bool
