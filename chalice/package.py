@@ -123,7 +123,7 @@ class ResourceBuilder(object):
 
 
 class TemplateGenerator(object):
-    template_file = None  # type: str
+    template_file = None  # type: Optional[str]
 
     def __init__(self, config, options):
         # type: (Config, PackageOptions) -> None
@@ -1488,8 +1488,11 @@ class AppPackager(object):
             template, config, outdir, chalice_stage_name)
         contents = self._template_serializer.serialize_template(template)
         extension = self._template_serializer.file_extension
+        template_file = self._templater.template_file
+        if template_file is None:
+            raise RuntimeError("No template file configured for packager.")
         filename = os.path.join(
-            outdir, self._templater.template_file) + '.' + extension
+            outdir, template_file) + '.' + extension
         self._osutils.set_file_contents(
             filename=filename,
             contents=contents,
