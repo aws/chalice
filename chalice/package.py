@@ -271,6 +271,11 @@ class SAMTemplateGenerator(TemplateGenerator):
             }
             lambdafunction_definition['Properties'].update(
                 reserved_concurrency_config)
+        if resource.lambda_alias is not None:
+            lambdafunction_definition['Properties']['AutoPublishAlias'] = (
+                resource.lambda_alias)
+            lambdafunction_definition['Properties'][
+                'AutoPublishAliasAllProperties'] = True
 
         layers = list(resource.layers) or []  # type: List[Any]
         if self._chalice_layer:
@@ -299,6 +304,26 @@ class SAMTemplateGenerator(TemplateGenerator):
 
         resources[cfn_name] = lambdafunction_definition
         self._add_iam_role(resource, resources[cfn_name])
+
+    def _lambda_alias_arn(self, resource_name, resources):
+        # type: (str, Dict[str, Any]) -> Optional[Dict[str, Any]]
+        alias = resources[resource_name]['Properties'].get('AutoPublishAlias')
+        if alias is None:
+            return None
+        return {
+            'Fn::Sub': [
+                '${FunctionArn}:%s' % alias,
+                {'FunctionArn': {'Fn::GetAtt': [resource_name, 'Arn']}},
+            ]
+        }
+
+    def _lambda_permission_function_name(self, resource_name, resources,
+                                         default):
+        # type: (str, Dict[str, Any], Any) -> Any
+        alias_arn = self._lambda_alias_arn(resource_name, resources)
+        if alias_arn is not None:
+            return alias_arn
+        return default
 
     def _add_iam_role(self, resource, cfn_resource):
         # type: (models.LambdaFunction, Dict[str, Any]) -> None
@@ -343,7 +368,8 @@ class SAMTemplateGenerator(TemplateGenerator):
         resources['APIHandlerInvokePermission'] = {
             'Type': 'AWS::Lambda::Permission',
             'Properties': {
-                'FunctionName': {'Ref': 'APIHandler'},
+                'FunctionName': self._lambda_permission_function_name(
+                    'APIHandler', resources, {'Ref': 'APIHandler'}),
                 'Action': 'lambda:InvokeFunction',
                 'Principal': self._options.service_principal('apigateway'),
                 'SourceArn': {
@@ -360,7 +386,11 @@ class SAMTemplateGenerator(TemplateGenerator):
             resources[auth_cfn_name + 'InvokePermission'] = {
                 'Type': 'AWS::Lambda::Permission',
                 'Properties': {
-                    'FunctionName': {'Fn::GetAtt': [auth_cfn_name, 'Arn']},
+                    'FunctionName': self._lambda_permission_function_name(
+                        auth_cfn_name,
+                        resources,
+                        {'Fn::GetAtt': [auth_cfn_name, 'Arn']},
+                    ),
                     'Action': 'lambda:InvokeFunction',
                     'Principal': self._options.service_principal('apigateway'),
                     'SourceArn': {
@@ -413,6 +443,11 @@ class SAMTemplateGenerator(TemplateGenerator):
     def _add_websocket_lambda_integration(
             self, api_ref, websocket_handler, resources):
         # type: (Dict[str, Any], str, Dict[str, Any]) -> None
+        alias = resources[websocket_handler]['Properties'].get(
+            'AutoPublishAlias')
+        alias_suffix = ''
+        if alias is not None:
+            alias_suffix = ':%s' % alias
         resources['%sAPIIntegration' % websocket_handler] = {
             'Type': 'AWS::ApiGatewayV2::Integration',
             'Properties': {
@@ -427,7 +462,8 @@ class SAMTemplateGenerator(TemplateGenerator):
                             ':lambda:path/2015-03-31/functions/arn'
                             ':${AWS::Partition}:lambda:${AWS::Region}'
                             ':${AWS::AccountId}:function'
-                            ':${WebsocketHandler}/invocations'
+                            ':${WebsocketHandler}%s/invocations' %
+                            alias_suffix
                         ),
                         {'WebsocketHandler': {'Ref': websocket_handler}}
                     ],
@@ -441,7 +477,11 @@ class SAMTemplateGenerator(TemplateGenerator):
         resources['%sInvokePermission' % websocket_handler] = {
             'Type': 'AWS::Lambda::Permission',
             'Properties': {
-                'FunctionName': {'Ref': websocket_handler},
+                'FunctionName': self._lambda_permission_function_name(
+                    websocket_handler,
+                    resources,
+                    {'Ref': websocket_handler},
+                ),
                 'Action': 'lambda:InvokeFunction',
                 'Principal': self._options.service_principal('apigateway'),
                 'SourceArn': {
@@ -855,6 +895,20 @@ class TerraformGenerator(TemplateGenerator):
         return '${aws_lambda_function.%s.%s}' % (
             lambda_function.resource_name, attr)
 
+    def _lambda_ref(self, lambda_function, attr='arn'):
+        # type: (models.LambdaFunction, str) -> str
+        if lambda_function.lambda_alias is not None:
+            return '${aws_lambda_alias.%s.%s}' % (
+                lambda_function.resource_name, attr)
+        return self._fref(lambda_function, attr)
+
+    def _lambda_ref_by_name(self, resource_name, template, attr='arn'):
+        # type: (str, Dict[str, Any], str) -> str
+        aliases = template['resource'].get('aws_lambda_alias', {})
+        if resource_name in aliases:
+            return '${aws_lambda_alias.%s.%s}' % (resource_name, attr)
+        return '${aws_lambda_function.%s.%s}' % (resource_name, attr)
+
     def _arnref(self, arn_template, **kw):
         # type: (str, str) -> str
         d = dict(
@@ -886,8 +940,22 @@ class TerraformGenerator(TemplateGenerator):
     def _add_websocket_lambda_integration(
             self, websocket_api_id, websocket_handler, template):
         # type: (str, str, Dict[str, Any]) -> None
-        websocket_handler_function_name = \
-            "${aws_lambda_function.%s.function_name}" % websocket_handler
+        if websocket_handler in template['resource'].get(
+            'aws_lambda_alias', {}
+        ):
+            websocket_function_arn = self._lambda_ref_by_name(
+                websocket_handler, template, 'arn')
+            function_expr = "%(websocket_function_arn)s"
+        else:
+            websocket_handler_function_name = (
+                "${aws_lambda_function.%s.function_name}" % websocket_handler
+            )
+            websocket_function_arn = websocket_handler_function_name
+            function_expr = (
+                "arn:%(partition)s:lambda:%(region)s"
+                ":%(account_id)s:function"
+                ":%(websocket_function_arn)s"
+            )
         resource_definition = {
             'api_id': websocket_api_id,
             'connection_type': 'INTERNET',
@@ -895,11 +963,9 @@ class TerraformGenerator(TemplateGenerator):
             'integration_type': 'AWS_PROXY',
             'integration_uri': self._arnref(
                 "arn:%(partition)s:apigateway:%(region)s"
-                ":lambda:path/2015-03-31/functions/arn"
-                ":%(partition)s:lambda:%(region)s"
-                ":%(account_id)s:function"
-                ":%(websocket_handler_function_name)s/invocations",
-                websocket_handler_function_name=websocket_handler_function_name
+                ":lambda:path/2015-03-31/functions/"
+                + function_expr + "/invocations",
+                websocket_function_arn=websocket_function_arn
             )
         }
         template['resource'].setdefault(
@@ -909,8 +975,16 @@ class TerraformGenerator(TemplateGenerator):
     def _add_websocket_lambda_invoke_permission(
             self, websocket_api_id, websocket_handler, template):
         # type: (str, str, Dict[str, Any]) -> None
-        websocket_handler_function_name = \
-            "${aws_lambda_function.%s.function_name}" % websocket_handler
+        if websocket_handler in template['resource'].get(
+            'aws_lambda_alias', {}
+        ):
+            websocket_handler_function_name = self._lambda_ref_by_name(
+                websocket_handler, template, 'arn')
+        else:
+            websocket_handler_function_name = (
+                "${aws_lambda_function.%s.function_name}" %
+                websocket_handler
+            )
         resource_definition = {
             "function_name": websocket_handler_function_name,
             "action": "lambda:InvokeFunction",
@@ -1085,7 +1159,7 @@ class TerraformGenerator(TemplateGenerator):
 
         bnotify = {
             'events': resource.events,
-            'lambda_function_arn': self._fref(resource.lambda_function)
+            'lambda_function_arn': self._lambda_ref(resource.lambda_function)
         }
 
         if resource.prefix:
@@ -1111,7 +1185,7 @@ class TerraformGenerator(TemplateGenerator):
             resource.resource_name] = {
             'statement_id': resource.resource_name,
             'action': 'lambda:InvokeFunction',
-            'function_name': self._fref(resource.lambda_function),
+            'function_name': self._lambda_ref(resource.lambda_function),
             'principal': self._options.service_principal('s3'),
             'source_account': '${data.aws_caller_identity.chalice.account_id}',
             'source_arn': ('arn:${data.aws_partition.chalice.partition}:'
@@ -1134,7 +1208,7 @@ class TerraformGenerator(TemplateGenerator):
             'batch_size': resource.batch_size,
             'maximum_batching_window_in_seconds':
                 resource.maximum_batching_window_in_seconds,
-            'function_name': self._fref(resource.lambda_function),
+            'function_name': self._lambda_ref(resource.lambda_function),
         }
         if resource.maximum_concurrency:
             aws_lambda_event_source_mapping["scaling_config"] = {
@@ -1155,7 +1229,7 @@ class TerraformGenerator(TemplateGenerator):
             'starting_position': resource.starting_position,
             'maximum_batching_window_in_seconds':
                 resource.maximum_batching_window_in_seconds,
-            'function_name': self._fref(resource.lambda_function)
+            'function_name': self._lambda_ref(resource.lambda_function)
         }
 
     def _generate_dynamodbeventsource(self, resource, template):
@@ -1167,7 +1241,7 @@ class TerraformGenerator(TemplateGenerator):
             'starting_position': resource.starting_position,
             'maximum_batching_window_in_seconds':
                 resource.maximum_batching_window_in_seconds,
-            'function_name': self._fref(resource.lambda_function),
+            'function_name': self._lambda_ref(resource.lambda_function),
         }
 
     def _generate_snslambdasubscription(self, resource, template):
@@ -1184,11 +1258,11 @@ class TerraformGenerator(TemplateGenerator):
             resource.resource_name] = {
             'topic_arn': topic_arn,
             'protocol': 'lambda',
-            'endpoint': self._fref(resource.lambda_function)
+            'endpoint': self._lambda_ref(resource.lambda_function)
         }
         template['resource'].setdefault('aws_lambda_permission', {})[
             resource.resource_name] = {
-            'function_name': self._fref(resource.lambda_function),
+            'function_name': self._lambda_ref(resource.lambda_function),
             'action': 'lambda:InvokeFunction',
             'principal': self._options.service_principal('sns'),
             'source_arn': topic_arn
@@ -1225,12 +1299,12 @@ class TerraformGenerator(TemplateGenerator):
             'rule': '${aws_cloudwatch_event_rule.%s.name}' % (
                 resource.resource_name),
             'target_id': resource.resource_name,
-            'arn': self._fref(resource.lambda_function)
+            'arn': self._lambda_ref(resource.lambda_function)
         }
         template['resource'].setdefault(
             'aws_lambda_permission', {})[
             resource.resource_name] = {
-            'function_name': self._fref(resource.lambda_function),
+            'function_name': self._lambda_ref(resource.lambda_function),
             'action': 'lambda:InvokeFunction',
             'principal': self._options.service_principal('events'),
             'source_arn': "${aws_cloudwatch_event_rule.%s.arn}" % (
@@ -1286,6 +1360,8 @@ class TerraformGenerator(TemplateGenerator):
         if resource.layers:
             func_definition.setdefault('layers', []).extend(
                 list(resource.layers))
+        if resource.lambda_alias is not None:
+            func_definition['publish'] = True
 
         if isinstance(resource.role, models.ManagedIAMRole):
             func_definition['role'] = '${aws_iam_role.%s.arn}' % (
@@ -1305,6 +1381,17 @@ class TerraformGenerator(TemplateGenerator):
             }
         template['resource'].setdefault('aws_lambda_function', {})[
             resource.resource_name] = func_definition
+        self._add_lambda_alias(resource, template)
+
+    def _add_lambda_alias(self, resource, template):
+        # type: (models.LambdaFunction, Dict[str, Any]) -> None
+        if resource.lambda_alias is not None:
+            template['resource'].setdefault('aws_lambda_alias', {})[
+                resource.resource_name] = {
+                'name': resource.lambda_alias,
+                'function_name': self._fref(resource, 'function_name'),
+                'function_version': self._fref(resource, 'version'),
+            }
 
     def _generate_log_group(self, resource, remplate):
         # type: (models.LogGroup, Dict[str, Any]) -> None
@@ -1359,7 +1446,7 @@ class TerraformGenerator(TemplateGenerator):
 
         template['resource'].setdefault('aws_lambda_permission', {})[
             resource.resource_name + '_invoke'] = {
-            'function_name': self._fref(resource.lambda_function),
+            'function_name': self._lambda_ref(resource.lambda_function),
             'action': 'lambda:InvokeFunction',
             'principal': self._options.service_principal('apigateway'),
             'source_arn':
@@ -1381,7 +1468,7 @@ class TerraformGenerator(TemplateGenerator):
         for auth in resource.authorizers:
             template['resource']['aws_lambda_permission'][
                 auth.resource_name + '_invoke'] = {
-                'function_name': self._fref(auth),
+                'function_name': self._lambda_ref(auth),
                 'action': 'lambda:InvokeFunction',
                 'principal': self._options.service_principal('apigateway'),
                 'source_arn': (

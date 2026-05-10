@@ -493,7 +493,6 @@ class PlanStage(object):
                 'subnet_ids': resource.subnet_ids,
                 'layers': layers
             }
-
             api_calls.extend([
                 (models.APICall(
                     method_name='create_function',
@@ -544,6 +543,62 @@ class PlanStage(object):
                 )
             ])
         api_calls.append(concurrency_api_call)
+        if resource.lambda_alias is not None:
+            version_varname = '%s_lambda_version' % resource.resource_name
+            version_result_varname = (
+                '%s_lambda_version_result' % resource.resource_name
+            )
+            alias_result_varname = (
+                '%s_lambda_alias_result' % resource.resource_name
+            )
+            api_calls.extend([
+                (models.APICall(
+                    method_name='publish_function_version',
+                    params={
+                        'function_name': resource.function_name,
+                    },
+                    output_var=version_result_varname,
+                ), "Publishing lambda function version: %s\n" %
+                    resource.function_name),
+                models.JPSearch(
+                    'Version',
+                    input_var=version_result_varname,
+                    output_var=version_varname,
+                ),
+                (models.APICall(
+                    method_name='create_or_update_function_alias',
+                    params={
+                        'function_name': resource.function_name,
+                        'alias_name': resource.lambda_alias,
+                        'function_version': Variable(version_varname),
+                    },
+                    output_var=alias_result_varname,
+                ), "Updating lambda function alias: %s:%s\n" %
+                    (resource.function_name, resource.lambda_alias)),
+                models.JPSearch(
+                    'AliasArn',
+                    input_var=alias_result_varname,
+                    output_var=varname,
+                ),
+                models.RecordResourceValue(
+                    resource_type='lambda_function',
+                    resource_name=resource.resource_name,
+                    name='lambda_alias',
+                    value=resource.lambda_alias,
+                ),
+                models.RecordResourceVariable(
+                    resource_type='lambda_function',
+                    resource_name=resource.resource_name,
+                    name='lambda_alias_arn',
+                    variable_name=varname,
+                ),
+                models.RecordResourceVariable(
+                    resource_type='lambda_function',
+                    resource_name=resource.resource_name,
+                    name='lambda_version',
+                    variable_name=version_varname,
+                ),
+            ])
         return api_calls
 
     def _plan_managediamrole(self, resource):
@@ -664,6 +719,42 @@ class PlanStage(object):
             # from the topic.
             deployed = self._remote_state.resource_deployed_values(resource)
             subscription_arn = deployed['subscription_arn']
+            if self._deployed_lambda_arn_needs_update(
+                deployed.get('lambda_arn'),
+                resource.lambda_function.lambda_alias,
+            ):
+                return instruction_for_topic_arn + [
+                    models.APICall(
+                        method_name='add_permission_for_sns_topic',
+                        params={'topic_arn': Variable(topic_arn_varname),
+                                'function_arn': function_arn},
+                    ),
+                    (models.APICall(
+                        method_name='subscribe_function_to_topic',
+                        params={'topic_arn': Variable(topic_arn_varname),
+                                'function_arn': function_arn},
+                        output_var=subscribe_varname,
+                    ), 'Subscribing %s to SNS topic %s\n'
+                        % (resource.lambda_function.function_name,
+                           resource.topic)
+                    ),
+                    models.APICall(
+                        method_name='unsubscribe_from_topic',
+                        params={'subscription_arn': subscription_arn},
+                    ),
+                    models.APICall(
+                        method_name='remove_permission_for_sns_topic',
+                        params={'topic_arn': deployed['topic_arn'],
+                                'function_arn': deployed['lambda_arn']},
+                    ),
+                ] + self._batch_record_resource(
+                    'sns_event', resource.resource_name, {
+                        'topic': resource.topic,
+                        'lambda_arn': Variable(function_arn.name),
+                        'subscription_arn': Variable(subscribe_varname),
+                        'topic_arn': Variable(topic_arn_varname),
+                    }
+                )
             return instruction_for_topic_arn + self._batch_record_resource(
                 'sns_event', resource.resource_name, {
                     'topic': resource.topic,
@@ -728,23 +819,31 @@ class PlanStage(object):
         if self._remote_state.resource_exists(resource):
             deployed = self._remote_state.resource_deployed_values(resource)
             uuid = deployed['event_uuid']
+            params = {
+                'event_uuid': uuid,
+                'batch_size': resource.batch_size,
+                'maximum_batching_window_in_seconds':
+                    resource.maximum_batching_window_in_seconds,
+                'maximum_concurrency': resource.maximum_concurrency
+            }
+            if self._deployed_lambda_arn_needs_update(
+                deployed.get('lambda_arn'),
+                resource.lambda_function.lambda_alias,
+            ):
+                params['function_name'] = function_arn
             return instruction_for_queue_arn + [
                 models.APICall(
                     method_name='update_lambda_event_source',
-                    params={
-                        'event_uuid': uuid,
-                        'batch_size': resource.batch_size,
-                        'maximum_batching_window_in_seconds':
-                            resource.maximum_batching_window_in_seconds,
-                        'maximum_concurrency': resource.maximum_concurrency
-                    }
+                    params=params,
                 )
             ] + self._batch_record_resource(
                 'sqs_event', resource.resource_name, {
                     'queue_arn': deployed['queue_arn'],
                     'event_uuid': uuid,
                     'queue': queue_name,
-                    'lambda_arn': deployed['lambda_arn'],
+                    'lambda_arn': self._recorded_lambda_arn(
+                        deployed['lambda_arn'], function_arn, resource
+                    ),
                 }
             )
         return instruction_for_queue_arn + [
@@ -790,20 +889,28 @@ class PlanStage(object):
         if self._remote_state.resource_exists(resource):
             deployed = self._remote_state.resource_deployed_values(resource)
             uuid = deployed['event_uuid']
+            params = {'event_uuid': uuid,
+                      'batch_size': resource.batch_size,
+                      'maximum_batching_window_in_seconds':
+                          resource.maximum_batching_window_in_seconds}
+            if self._deployed_lambda_arn_needs_update(
+                deployed.get('lambda_arn'),
+                resource.lambda_function.lambda_alias,
+            ):
+                params['function_name'] = function_arn
             return instruction_for_stream_arn + [
                 models.APICall(
                     method_name='update_lambda_event_source',
-                    params={'event_uuid': uuid,
-                            'batch_size': resource.batch_size,
-                            'maximum_batching_window_in_seconds':
-                                resource.maximum_batching_window_in_seconds}
+                    params=params,
                 )
             ] + self._batch_record_resource(
                 'kinesis_event', resource.resource_name, {
                     'kinesis_arn': deployed['kinesis_arn'],
                     'event_uuid': uuid,
                     'stream': resource.stream,
-                    'lambda_arn': deployed['lambda_arn'],
+                    'lambda_arn': self._recorded_lambda_arn(
+                        deployed['lambda_arn'], function_arn, resource
+                    ),
                 }
             )
         return instruction_for_stream_arn + [
@@ -873,19 +980,27 @@ class PlanStage(object):
         if self._remote_state.resource_exists(resource):
             deployed = self._remote_state.resource_deployed_values(resource)
             uuid = deployed['event_uuid']
+            params = {'event_uuid': uuid,
+                      'batch_size': resource.batch_size,
+                      'maximum_batching_window_in_seconds':
+                          resource.maximum_batching_window_in_seconds}
+            if self._deployed_lambda_arn_needs_update(
+                deployed.get('lambda_arn'),
+                resource.lambda_function.lambda_alias,
+            ):
+                params['function_name'] = function_arn
             return instructions + [
                 models.APICall(
                     method_name='update_lambda_event_source',
-                    params={'event_uuid': uuid,
-                            'batch_size': resource.batch_size,
-                            'maximum_batching_window_in_seconds':
-                                resource.maximum_batching_window_in_seconds}
+                    params=params,
                 )
             ] + self._batch_record_resource(
                 'dynamodb_event', resource.resource_name, {
                     'stream_arn': deployed['stream_arn'],
                     'event_uuid': deployed['event_uuid'],
-                    'lambda_arn': deployed['lambda_arn'],
+                    'lambda_arn': self._recorded_lambda_arn(
+                        deployed['lambda_arn'], function_arn, resource
+                    ),
                 }
             )
         return instructions + [
@@ -928,7 +1043,27 @@ class PlanStage(object):
         function_arn = Variable(
             '%s_lambda_arn' % resource.lambda_function.resource_name
         )
-        return self._arn_parse_instructions(function_arn) + [
+        cleanup_plan = []  # type: List[InstructionMsg]
+        if self._remote_state.resource_exists(resource):
+            deployed = self._remote_state.resource_deployed_values(resource)
+            if self._deployed_lambda_arn_needs_update(
+                deployed.get('lambda_arn'),
+                resource.lambda_function.lambda_alias,
+            ):
+                cleanup_plan = [
+                    models.APICall(
+                        method_name='disconnect_s3_bucket_from_lambda',
+                        params={'bucket': deployed['bucket'],
+                                'function_arn': deployed['lambda_arn']},
+                    ),
+                    models.APICall(
+                        method_name='remove_permission_for_s3_event',
+                        params={'bucket': deployed['bucket'],
+                                'function_arn': deployed['lambda_arn'],
+                                'account_id': Variable('account_id')},
+                    ),
+                ]
+        notification_plan = cast(List[InstructionMsg], [
             models.APICall(
                 method_name='add_permission_for_s3_event',
                 params={'bucket': resource.bucket,
@@ -945,6 +1080,8 @@ class PlanStage(object):
             ), 'Configuring S3 events in bucket %s to function %s\n'
                 % (resource.bucket, resource.lambda_function.function_name)
             ),
+        ]) + cleanup_plan
+        record_plan = cast(List[InstructionMsg], [
             models.RecordResourceValue(
                 resource_type='s3_event',
                 resource_name=resource.resource_name,
@@ -957,7 +1094,32 @@ class PlanStage(object):
                 name='lambda_arn',
                 variable_name=function_arn.name,
             ),
-        ]
+        ])
+        return (
+            self._arn_parse_instructions(function_arn) +
+            notification_plan + record_plan
+        )
+
+    def _recorded_lambda_arn(
+        self, deployed_lambda_arn, function_arn, resource
+    ):
+        # type: (str, Variable, models.FunctionEventSubscriber) -> Any
+        if self._deployed_lambda_arn_needs_update(
+            deployed_lambda_arn,
+            resource.lambda_function.lambda_alias,
+        ):
+            return Variable(function_arn.name)
+        return deployed_lambda_arn
+
+    def _deployed_lambda_arn_needs_update(self, deployed_lambda_arn, alias):
+        # type: (Any, Optional[str]) -> bool
+        if not isinstance(deployed_lambda_arn, str):
+            return False
+        parts = deployed_lambda_arn.split(':')
+        qualifier = None
+        if len(parts) >= 8 and parts[5] == 'function':
+            qualifier = parts[7]
+        return qualifier != alias
 
     def _create_cloudwatchevent(self, resource):
         # type: (models.CloudWatchEventBase) -> Sequence[InstructionMsg]
@@ -1033,21 +1195,32 @@ class PlanStage(object):
             'name': function.function_name,
             'varname': varname,
             'lambda_arn_var': Variable(varname),
+            'permission_function_name': (
+                Variable(varname) if function.lambda_alias is not None
+                else function.function_name
+            )
         }
 
     def _inject_websocket_integrations(self, configs):
         # type: (Dict[str, Any]) -> Sequence[InstructionMsg]
         instructions = []  # type: List[InstructionMsg]
         for key, config in configs.items():
+            variables = ['partition', 'region_name', 'account_id']
+            function_uri = (
+                'arn:{partition}:lambda:{region_name}:{account_id}:function'
+                ':%s' % config['name']
+            )
+            if config['function'].lambda_alias is not None:
+                function_uri = '{%s}' % config['varname']
+                variables = ['partition', 'region_name', config['varname']]
             instructions.append(
                 models.StoreValue(
                     name='websocket-%s-integration-lambda-path' % key,
                     value=StringFormat(
                         'arn:{partition}:apigateway:{region_name}:lambda:path/'
-                        '2015-03-31/functions/arn:{partition}'
-                        ':lambda:{region_name}:{account_id}:function'
-                        ':%s/invocations' % config['name'],
-                        ['partition', 'region_name', 'account_id'],
+                        '2015-03-31/functions/%s/invocations' %
+                        function_uri,
+                        variables,
                     ),
                 ),
             )
@@ -1123,7 +1296,8 @@ class PlanStage(object):
         shared_plan_epilogue += [
             models.APICall(
                 method_name='add_permission_for_apigateway_v2',
-                params={'function_name': function_config['name'],
+                params={'function_name':
+                        function_config['permission_function_name'],
                         'region_name': Variable('region_name'),
                         'account_id': Variable('account_id'),
                         'api_id': Variable('websocket_api_id')},
@@ -1222,9 +1396,12 @@ class PlanStage(object):
     def _plan_restapi(self, resource):
         # type: (models.RestAPI) -> Sequence[InstructionMsg]
         function = resource.lambda_function
-        function_name = function.function_name
         varname = '%s_lambda_arn' % function.resource_name
         lambda_arn_var = Variable(varname)
+        function_name = function.function_name
+        permission_function_name = function_name  # type: Union[str, Variable]
+        if function.lambda_alias is not None:
+            permission_function_name = lambda_arn_var
         # There's a set of shared instructions that are needed
         # in both the update as well as the initial create case.
         # That's what this shared_plan_premable is for.
@@ -1257,7 +1434,7 @@ class PlanStage(object):
             ),
             models.APICall(
                 method_name='add_permission_for_apigateway',
-                params={'function_name': function_name,
+                params={'function_name': permission_function_name,
                         'region_name': Variable('region_name'),
                         'account_id': Variable('account_id'),
                         'rest_api_id': Variable('rest_api_id')},
@@ -1284,10 +1461,15 @@ class PlanStage(object):
             ),
         ]  # type: List[InstructionMsg]
         for auth in resource.authorizers:
+            auth_function_name: Union[str, Variable] = auth.function_name
+            if auth.lambda_alias is not None:
+                auth_function_name = Variable(
+                    '%s_lambda_arn' % auth.resource_name
+                )
             shared_plan_epilogue.append(
                 models.APICall(
                     method_name='add_permission_for_apigateway',
-                    params={'function_name': auth.function_name,
+                    params={'function_name': auth_function_name,
                             'region_name': Variable('region_name'),
                             'account_id': Variable('account_id'),
                             'rest_api_id': Variable('rest_api_id')},
