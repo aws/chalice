@@ -160,7 +160,7 @@ typing-extensions==4.15.0
     #   astroid
     #   exceptiongroup
     #   mypy
-urllib3==2.6.3
+urllib3==2.7.0
     # via
     #   botocore
     #   requests
