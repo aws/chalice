@@ -1002,6 +1002,87 @@ class TypedAWSClient(object):
         if kwargs:
             self._do_update_function_config(function_name, kwargs)
 
+    def publish_function_version(
+        self, function_name: str
+    ) -> Dict[str, Any]:
+        lambda_client = self._client('lambda')
+        try:
+            result = lambda_client.publish_version(
+                FunctionName=function_name
+            )
+        except lambda_client.exceptions.ResourceConflictException:
+            result = self._latest_published_function_version(function_name)
+        self._wait_for_active_function_version(
+            function_name, result['Version'])
+        return result
+
+    def _latest_published_function_version(
+        self, function_name: str
+    ) -> Dict[str, Any]:
+        lambda_client = self._client('lambda')
+        latest = None  # type: Optional[Dict[str, Any]]
+        kwargs = {'FunctionName': function_name}  # type: Dict[str, Any]
+        while True:
+            response = lambda_client.list_versions_by_function(**kwargs)
+            for version in response.get('Versions', []):
+                version_name = version.get('Version')
+                if version_name is not None and version_name.isdigit():
+                    if latest is None:
+                        latest = version
+                    elif int(version_name) > int(latest.get('Version', '0')):
+                        latest = version
+            marker = response.get('NextMarker')
+            if marker is None:
+                break
+            kwargs['Marker'] = marker
+        if latest is None:
+            raise RuntimeError(
+                'Unable to find published version for %s' % function_name
+            )
+        return latest
+
+    def _wait_for_active_function_version(
+        self, function_name: str, version: str
+    ) -> None:
+        lambda_client = self._client('lambda')
+        function_version = '%s:%s' % (function_name, version)
+        for _ in range(self.LAMBDA_CREATE_ATTEMPTS):
+            config = lambda_client.get_function_configuration(
+                FunctionName=function_version
+            )
+            active = config.get('State') == 'Active'
+            updated = config.get('LastUpdateStatus') in (None, 'Successful')
+            if active and updated:
+                return
+            self._sleep(self.DELAY_TIME)
+        raise RuntimeError(
+            'Timed out waiting for published version %s to become active' %
+            function_version
+        )
+
+    def create_or_update_function_alias(
+        self, function_name: str, alias_name: str, function_version: str
+    ) -> Dict[str, Any]:
+        lambda_client = self._client('lambda')
+        try:
+            alias = lambda_client.get_alias(
+                FunctionName=function_name,
+                Name=alias_name,
+            )
+        except lambda_client.exceptions.ResourceNotFoundException:
+            return lambda_client.create_alias(
+                FunctionName=function_name,
+                Name=alias_name,
+                FunctionVersion=function_version,
+            )
+        if alias.get('FunctionVersion') == function_version:
+            return alias
+        return lambda_client.update_alias(
+            FunctionName=function_name,
+            Name=alias_name,
+            FunctionVersion=function_version,
+        )
+
     def _do_update_function_config(
         self, function_name: str, kwargs: Dict[str, Any]
     ) -> None:
@@ -1854,6 +1935,7 @@ class TypedAWSClient(object):
         batch_size: int,
         maximum_batching_window_in_seconds: Optional[int] = 0,
         maximum_concurrency: Optional[int] = None,
+        function_name: Optional[str] = None,
     ) -> None:
         lambda_client = self._client('lambda')
         batch_window = maximum_batching_window_in_seconds
@@ -1866,6 +1948,8 @@ class TypedAWSClient(object):
             kwargs['ScalingConfig'] = {
                 'MaximumConcurrency': maximum_concurrency
             }
+        if function_name is not None:
+            kwargs['FunctionName'] = function_name
         self._call_client_method_with_retries(
             lambda_client.update_event_source_mapping,
             kwargs,

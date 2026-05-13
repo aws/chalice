@@ -193,6 +193,29 @@ def test_stage_overrides_function_values():
     assert c.lambda_timeout == 20
 
 
+def test_can_chain_lambda_alias_values():
+    disk_config = {
+        'lambda_alias': 'global',
+        'lambda_functions': {
+            'api_handler': {
+                'lambda_alias': 'function',
+            },
+        },
+        'stages': {
+            'dev': {
+                'lambda_alias': 'stage',
+                'lambda_functions': {
+                    'api_handler': {
+                        'lambda_alias': 'stage-function',
+                    },
+                },
+            },
+        },
+    }
+    c = Config(chalice_stage='dev', config_from_disk=disk_config)
+    assert c.lambda_alias == 'stage-function'
+
+
 def test_can_create_scope_obj_with_new_function():
     disk_config = {
         'lambda_timeout': 10,
