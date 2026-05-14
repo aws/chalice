@@ -265,6 +265,10 @@ def test_supports_path_params(smoke_test_app):
     assert smoke_test_app.get_json('/path/bar') == {'path': 'bar'}
 
 
+def test_supports_catch_all_param(smoke_test_app):
+    assert smoke_test_app.get_json('/catch-all/a/b') == {'proxy': 'a/b'}
+
+
 def test_path_params_mapped_in_api(smoke_test_app, apig_client):
     # Use the API Gateway API to ensure that path parameters
     # are modeled as such.  Otherwise this will break
