@@ -1,0 +1,5 @@
+{
+  "type": "feature",
+  "category": "architecture",
+  "description": "Add support for Arm64 processor ([1808](https://github.com/aws/chalice/issues/1808)]"
+}

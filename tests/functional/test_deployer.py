@@ -267,7 +267,7 @@ def test_py_deps_in_layer_package(tmpdir, layer_packager):
     extra_package = vendor.mkdir('mypackage')
     extra_package.join('__init__.py').write('# Test package')
     name = packager.create_deployment_package(
-        str(appdir), 'python3.11')
+        str(appdir), 'python3.11', architecture='x86_64')
     assert os.path.basename(name).startswith('managed-layer-')
     with zipfile.ZipFile(name) as f:
         prefix = 'python/lib/python3.11/site-packages'
@@ -276,8 +276,9 @@ def test_py_deps_in_layer_package(tmpdir, layer_packager):
         _assert_not_in_zip('%s/chalicelib/__init__.py' % prefix, f)
         _assert_not_in_zip('%s/app.py' % prefix, f)
     deps_builder.build_site_packages.assert_called_with(
-        'cp311', str(appdir.join('requirements.txt')), mock.ANY
-    )
+        'cp311',
+        str(appdir.join('requirements.txt')),
+        mock.ANY, architecture='x86_64')
 
 
 def test_empty_layer_package_raises_error(tmpdir, layer_packager):

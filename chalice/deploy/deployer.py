@@ -451,7 +451,9 @@ class DeploymentPackager(BaseDeployStep):
         # type: (Config, models.DeploymentPackage) -> None
         if isinstance(resource.filename, models.Placeholder):
             zip_filename = self._packager.create_deployment_package(
-                config.project_dir, config.lambda_python_version)
+                config.project_dir,
+                config.lambda_python_version,
+                architecture=config.lambda_architecture)
             resource.filename = zip_filename
 
 
@@ -472,7 +474,9 @@ class ManagedLayerDeploymentPackager(BaseDeployStep):
         if isinstance(resource.deployment_package.filename,
                       models.Placeholder):
             zip_filename = self._lambda_packager.create_deployment_package(
-                config.project_dir, config.lambda_python_version
+                config.project_dir,
+                config.lambda_python_version,
+                architecture=config.lambda_architecture
             )
             resource.deployment_package.filename = zip_filename
         if resource.managed_layer is not None and \
@@ -489,7 +493,9 @@ class ManagedLayerDeploymentPackager(BaseDeployStep):
                       models.Placeholder):
             try:
                 zip_filename = self._layer_packager.create_deployment_package(
-                    config.project_dir, config.lambda_python_version
+                    config.project_dir,
+                    config.lambda_python_version,
+                    architecture=config.lambda_architecture,
                 )
                 resource.deployment_package.filename = zip_filename
             except EmptyPackageError:

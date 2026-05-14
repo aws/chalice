@@ -91,7 +91,10 @@ class BaseLambdaDeploymentPackager(object):
         self._ui = ui
 
     def create_deployment_package(
-        self, project_dir: str, python_version: str
+        self,
+        project_dir: str,
+        python_version: str,
+        architecture: str = 'x86_64',
     ) -> str:
         raise NotImplementedError("create_deployment_package")
 
@@ -116,7 +119,10 @@ class BaseLambdaDeploymentPackager(object):
                 zipped.write(full_path, zip_path)
 
     def deployment_package_filename(
-        self, project_dir: str, python_version: str
+        self,
+        project_dir: str,
+        python_version: str,
+        architecture: str = 'x86_64',
     ) -> str:
         # Computes the name of the deployment package zipfile
         # based on a hash of the requirements file.
@@ -126,10 +132,18 @@ class BaseLambdaDeploymentPackager(object):
         # to the end of the filename since the the dependencies may not change
         # but if the python version changes then the dependencies need to be
         # re-downloaded since they will not be compatible.
-        return self._deployment_package_filename(project_dir, python_version)
+        return self._deployment_package_filename(
+            project_dir,
+            python_version,
+            architecture=architecture
+        )
 
     def _deployment_package_filename(
-        self, project_dir: str, python_version: str, prefix: str = ''
+        self,
+        project_dir: str,
+        python_version: str,
+        prefix: str = '',
+        architecture: str = 'x86_64',
     ) -> str:
         requirements_filename = self._get_requirements_filename(project_dir)
         hash_contents = self._hash_project_dir(
@@ -137,7 +151,9 @@ class BaseLambdaDeploymentPackager(object):
             self._osutils.joinpath(project_dir, self._VENDOR_DIR),
             project_dir,
         )
-        filename = '%s%s-%s.zip' % (prefix, hash_contents, python_version)
+        filename = '%s%s-%s-%s.zip' % (
+            prefix, hash_contents, python_version, architecture
+        )
         deployment_package_filename = self._osutils.joinpath(
             project_dir, '.chalice', 'deployments', filename
         )
@@ -289,11 +305,15 @@ class BaseLambdaDeploymentPackager(object):
         python_version: str,
         requirements_filepath: str,
         site_packages_dir: str,
+        architecture: str = 'x86_64',
     ) -> None:
         try:
             abi = self._RUNTIME_TO_ABI[python_version]
             self._dependency_builder.build_site_packages(
-                abi, requirements_filepath, site_packages_dir
+                abi,
+                requirements_filepath,
+                site_packages_dir,
+                architecture=architecture,
             )
         except MissingDependencyError as e:
             missing_packages = '\n'.join([p.identifier for p in e.missing])
@@ -302,13 +322,16 @@ class BaseLambdaDeploymentPackager(object):
 
 class LambdaDeploymentPackager(BaseLambdaDeploymentPackager):
     def create_deployment_package(
-        self, project_dir: str, python_version: str
+        self,
+        project_dir: str,
+        python_version: str,
+        architecture: str = 'x86_64'
     ) -> str:
         msg = "Creating deployment package."
         self._ui.write("%s\n" % msg)
         logger.debug(msg)
         package_filename = self.deployment_package_filename(
-            project_dir, python_version
+            project_dir, python_version, architecture=architecture
         )
         if self._osutils.file_exists(package_filename):
             self._ui.write("Reusing existing deployment package.\n")
@@ -319,7 +342,10 @@ class LambdaDeploymentPackager(BaseLambdaDeploymentPackager):
                 project_dir
             )
             self._build_python_dependencies(
-                python_version, requirements_filepath, site_packages_dir=tmpdir
+                python_version,
+                requirements_filepath,
+                site_packages_dir=tmpdir,
+                architecture=architecture,
             )
             with self._osutils.open_zip(
                 package_filename, 'w', self._osutils.ZIP_DEFLATED
@@ -334,7 +360,10 @@ class LambdaDeploymentPackager(BaseLambdaDeploymentPackager):
 
 class AppOnlyDeploymentPackager(BaseLambdaDeploymentPackager):
     def create_deployment_package(
-        self, project_dir: str, python_version: str
+        self,
+        project_dir: str,
+        python_version: str,
+        architecture: str = 'x86_64',
     ) -> str:
         msg = "Creating app deployment package."
         self._ui.write("%s\n" % msg)
@@ -353,15 +382,23 @@ class AppOnlyDeploymentPackager(BaseLambdaDeploymentPackager):
         return package_filename
 
     def deployment_package_filename(
-        self, project_dir: str, python_version: str
+        self,
+        project_dir: str,
+        python_version: str,
+        architecture: str = 'x86_64',
     ) -> str:
         return self._deployment_package_filename(
-            project_dir, python_version, prefix='appcode-'
+            project_dir,
+            python_version,
+            prefix='appcode-',
+            architecture=architecture
         )
 
     def _deployment_package_filename(
-        self, project_dir: str, python_version: str, prefix: str = ''
+        self, project_dir: str, python_version: str, prefix: str = '',
+        architecture: str = 'x86_64'
     ) -> str:
+        # architecture is unused; this zip only contains app source code.
         h = hashlib.md5(b'')
         for filename, _ in self._iter_app_filenames(project_dir):
             with self._osutils.open(filename, 'rb') as f:
@@ -384,13 +421,16 @@ class LayerDeploymentPackager(BaseLambdaDeploymentPackager):
     _PREFIX = 'python/lib/%s/site-packages'
 
     def create_deployment_package(
-        self, project_dir: str, python_version: str
+        self,
+        project_dir: str,
+        python_version: str,
+        architecture: str = 'x86_64',
     ) -> str:
         msg = "Creating shared layer deployment package."
         self._ui.write("%s\n" % msg)
         logger.debug(msg)
         package_filename = self.deployment_package_filename(
-            project_dir, python_version
+            project_dir, python_version, architecture=architecture
         )
         self._create_output_dir_if_needed(package_filename)
         if self._osutils.file_exists(package_filename):
@@ -403,7 +443,10 @@ class LayerDeploymentPackager(BaseLambdaDeploymentPackager):
                 project_dir
             )
             self._build_python_dependencies(
-                python_version, requirements_filepath, site_packages_dir=tmpdir
+                python_version,
+                requirements_filepath,
+                site_packages_dir=tmpdir,
+                architecture=architecture,
             )
             with self._osutils.open_zip(
                 package_filename, 'w', self._osutils.ZIP_DEFLATED
@@ -439,14 +482,23 @@ class LayerDeploymentPackager(BaseLambdaDeploymentPackager):
                 raise EmptyPackageError(package_filename)
 
     def deployment_package_filename(
-        self, project_dir: str, python_version: str
+        self, project_dir: str,
+        python_version: str,
+        architecture: str = 'x86_64'
     ) -> str:
         return self._deployment_package_filename(
-            project_dir, python_version, prefix='managed-layer-'
+            project_dir,
+            python_version,
+            prefix='managed-layer-',
+            architecture=architecture
         )
 
     def _deployment_package_filename(
-        self, project_dir: str, python_version: str, prefix: str = ''
+        self,
+        project_dir: str,
+        python_version: str,
+        prefix: str = '',
+        architecture: str = 'x86_64',
     ) -> str:
         requirements_filename = self._get_requirements_filename(project_dir)
         if not self._osutils.file_exists(requirements_filename):
@@ -463,7 +515,9 @@ class LayerDeploymentPackager(BaseLambdaDeploymentPackager):
         if self._osutils.directory_exists(vendor_dir):
             self._hash_vendor_dir(vendor_dir, h)
         hash_contents = h.hexdigest()
-        filename = '%s%s-%s.zip' % (prefix, hash_contents, python_version)
+        filename = '%s%s-%s-%s.zip' % (
+            prefix, hash_contents, python_version, architecture
+        )
         deployment_package_filename = self._osutils.joinpath(
             project_dir, '.chalice', 'deployments', filename
         )
@@ -483,7 +537,6 @@ class DependencyBuilder(object):
     packager.
     """
 
-    _ADDITIONAL_COMPATIBLE_PLATFORM = {'any', 'linux_x86_64'}
     _MANYLINUX_LEGACY_MAP = {
         'manylinux1_x86_64': 'manylinux_2_5_x86_64',
         'manylinux2010_x86_64': 'manylinux_2_12_x86_64',
@@ -522,13 +575,16 @@ class DependencyBuilder(object):
         self._pip = pip_runner
 
     def _is_compatible_wheel_filename(
-        self, expected_abi: str, filename: str
+        self, expected_abi: str, filename: str, architecture: str = 'x86_64',
     ) -> bool:
         wheel = filename[:-4]
         all_compatibility_tags = self._iter_all_compatibility_tags(wheel)
         for implementation, abi, platform in all_compatibility_tags:
             # Verify platform is compatible
-            if not self._is_compatible_platform_tag(expected_abi, platform):
+            if not self._is_compatible_platform_tag(
+                    expected_abi,
+                    platform,
+                    architecture=architecture):
                 continue
             # Verify that the ABI is compatible with lambda. Either none or the
             # correct type for the python version cp27mu for py27 and cp36m for
@@ -547,7 +603,7 @@ class DependencyBuilder(object):
         return False
 
     def _is_compatible_platform_tag(
-        self, expected_abi: str, platform: str
+        self, expected_abi: str, platform: str, architecture: str = 'x86_64',
     ) -> bool:
         # From PEP 600, the new manylinux tag is
         # manylinux_${GLIBCMAJOR}_${GLIBCMINOR}_${ARCH}
@@ -556,7 +612,9 @@ class DependencyBuilder(object):
         # legacy manylinux formats to the new perennial format.
         # Then we verify that the glibc version is compatible with the version
         # on the Lambda runtime (from _RUNTIME_GLIBC).
-        if platform in self._ADDITIONAL_COMPATIBLE_PLATFORM:
+        arch = 'aarch64' if architecture == 'arm64' else 'x86_64'
+        compatible_platforms = {'any', 'linux_%s' % arch}
+        if platform in compatible_platforms:
             logger.debug("Found compatible platform tag: %s", platform)
             return True
         elif platform.startswith('manylinux'):
@@ -567,6 +625,9 @@ class DependencyBuilder(object):
             if m is None:
                 return False
             tag_major, tag_minor = [int(x) for x in m.groups()[:2]]
+            tag_arch = m.group(3)
+            if tag_arch != arch:
+                return False
             runtime_major, runtime_minor = self._RUNTIME_GLIBC.get(
                 expected_abi, self._DEFAULT_GLIBC
             )
@@ -632,7 +693,8 @@ class DependencyBuilder(object):
         return deps
 
     def _download_binary_wheels(
-        self, abi: str, packages: Set[Package], directory: str
+        self, abi: str, packages: Set[Package], directory: str,
+        architecture: str = 'x86_64',
     ) -> None:
         # Try to get binary wheels for each package that isn't compatible.
         logger.debug("Downloading manylinux wheels: %s", packages)
@@ -640,22 +702,25 @@ class DependencyBuilder(object):
             abi,
             [pkg.identifier for pkg in packages],
             directory,
-            self._get_pip_platforms(abi),
+            self._get_pip_platforms(abi, architecture=architecture),
         )
 
-    def _get_pip_platforms(self, abi: str) -> List[str]:
+    def _get_pip_platforms(
+            self, abi: str,
+            architecture: str = 'x86_64') -> List[str]:
         # Pip treats --platform as a literal tag and does not auto-include
         # lower manylinux_X_Y versions, so we enumerate every glibc minor up
         # to the runtime's. The trailing manylinux2014_x86_64 alias engages
         # pip's legacy compatibility hierarchy (manylinux1, manylinux2010).
+        arch = 'aarch64' if architecture == 'arm64' else 'x86_64'
         runtime_major, runtime_minor = self._RUNTIME_GLIBC.get(
             abi, self._DEFAULT_GLIBC
         )
         platforms = [
-            'manylinux_%s_%s_x86_64' % (runtime_major, minor)
+            'manylinux_%s_%s_%s' % (runtime_major, minor, arch)
             for minor in range(17, runtime_minor + 1)
         ]
-        platforms.append('manylinux2014_x86_64')
+        platforms.append('manylinux2014_%s' % arch)
         return platforms
 
     def _download_sdists(self, packages: Set[Package], directory: str) -> None:
@@ -687,7 +752,7 @@ class DependencyBuilder(object):
             self._pip.build_wheel(path_to_sdist, directory, compile_c)
 
     def _categorize_wheel_files(
-        self, abi: str, directory: str
+        self, abi: str, directory: str, architecture: str = 'x86_64',
     ) -> Tuple[Set[Package], Set[Package]]:
         final_wheels = [
             Package(directory, filename)
@@ -697,13 +762,20 @@ class DependencyBuilder(object):
 
         compatible_wheels, incompatible_wheels = set(), set()
         for wheel in final_wheels:
-            if self._is_compatible_wheel_filename(abi, wheel.filename):
+            if self._is_compatible_wheel_filename(
+                    abi,
+                    wheel.filename,
+                    architecture=architecture):
                 compatible_wheels.add(wheel)
             else:
                 incompatible_wheels.add(wheel)
         return compatible_wheels, incompatible_wheels
 
-    def _categorize_deps(self, abi: str, deps: Set[Package]) -> Any:
+    def _categorize_deps(
+            self,
+            abi: str,
+            deps: Set[Package],
+            architecture: str = 'x86_64') -> Any:
         compatible_wheels = set()
         incompatible_wheels = set()
         sdists = set()
@@ -711,15 +783,20 @@ class DependencyBuilder(object):
             if package.dist_type == 'sdist':
                 sdists.add(package)
             else:
-                if self._is_compatible_wheel_filename(abi, package.filename):
+                if self._is_compatible_wheel_filename(
+                        abi,
+                        package.filename,
+                        architecture=architecture):
                     compatible_wheels.add(package)
                 else:
                     incompatible_wheels.add(package)
         return sdists, compatible_wheels, incompatible_wheels
 
     def _download_dependencies(
-        self, abi: str, directory: str, requirements_filename: str
-    ) -> Tuple[Set[Package], Set[Package]]:
+            self, abi: str,
+            directory: str,
+            requirements_filename: str,
+            architecture: str = 'x86_64') -> Tuple[Set[Package], Set[Package]]:
         # Download all dependencies we can, letting pip choose what to
         # download.
         # deps should represent the best effort we can make to gather all the
@@ -739,7 +816,7 @@ class DependencyBuilder(object):
         # wheel file may not be compatible with lambda. Pure python wheels
         # still will be compatible because they have no platform dependencies.
         sdists, compatible_wheels, incompatible_wheels = self._categorize_deps(
-            abi, deps
+            abi, deps, architecture=architecture
         )
         logger.debug("Compatible wheels for Lambda: %s", compatible_wheels)
         logger.debug(
@@ -752,7 +829,11 @@ class DependencyBuilder(object):
         # For these packages we need to explicitly try to download a
         # compatible wheel file.
         missing_wheels = sdists.union(incompatible_wheels)
-        self._download_binary_wheels(abi, missing_wheels, directory)
+        self._download_binary_wheels(
+            abi,
+            missing_wheels,
+            directory,
+            architecture=architecture)
 
         # Re-count the wheel files after the second download pass. Anything
         # that has an sdist but not a valid wheel file is still not going to
@@ -764,7 +845,7 @@ class DependencyBuilder(object):
         # incompatible wheel file and no sdist. So we need to get any missing
         # sdists before we can build them.
         compatible_wheels, incompatible_wheels = self._categorize_wheel_files(
-            abi, directory
+            abi, directory, architecture=architecture
         )
         # The self._download_binary_wheels() can now introduce duplicate
         # entries.  For example, if we download a macOS whl at first but
@@ -791,7 +872,7 @@ class DependencyBuilder(object):
         # building the package and trying to sever its ability to find a C
         # compiler.
         compatible_wheels, incompatible_wheels = self._categorize_wheel_files(
-            abi, directory
+            abi, directory, architecture=architecture
         )
         logger.debug(
             "compatible after building wheels (C compiling): %s",
@@ -805,7 +886,7 @@ class DependencyBuilder(object):
         # can do about any missing wheel files. We tried downloading a
         # compatible version directly and building from source.
         compatible_wheels, incompatible_wheels = self._categorize_wheel_files(
-            abi, directory
+            abi, directory, architecture=architecture
         )
         logger.debug(
             "compatible after building wheels (no C compiling): %s",
@@ -875,12 +956,14 @@ class DependencyBuilder(object):
             self._install_purelib_and_platlib(wheel, dst_dir)
 
     def build_site_packages(
-        self, abi: str, requirements_filepath: str, target_directory: str
+        self, abi: str, requirements_filepath: str, target_directory: str,
+        architecture: str = 'x86_64',
     ) -> None:
         if self._has_at_least_one_package(requirements_filepath):
             with self._osutils.tempdir() as tempdir:
                 wheels, packages_without_wheels = self._download_dependencies(
-                    abi, tempdir, requirements_filepath
+                    abi, tempdir, requirements_filepath,
+                    architecture=architecture,
                 )
                 self._install_wheels(tempdir, target_directory, wheels)
             if packages_without_wheels:

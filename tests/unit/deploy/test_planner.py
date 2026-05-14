@@ -46,6 +46,7 @@ def create_function_resource(name, function_name=None,
         security_group_ids=[],
         subnet_ids=[],
         layers=layers,
+        architecture='x86_64',
         reserved_concurrency=None,
         managed_layer=managed_layer,
     )
@@ -606,6 +607,7 @@ class TestPlanLambdaFunction(BasePlannerTests):
                 'security_group_ids': [],
                 'subnet_ids': [],
                 'layers': [],
+                'architecture': 'x86_64',
             },
         ),
             models.APICall(
@@ -657,7 +659,8 @@ class TestPlanLambdaFunction(BasePlannerTests):
                 'memory_size': 128,
                 'security_group_ids': [],
                 'subnet_ids': [],
-                'layers': [Variable('layer_version_arn')] + layers
+                'layers': [Variable('layer_version_arn')] + layers,
+                'architecture': 'x86_64'
             },
         ),
             models.APICall(
@@ -693,6 +696,7 @@ class TestPlanLambdaFunction(BasePlannerTests):
             'security_group_ids': [],
             'subnet_ids': [],
             'layers': [],
+            'architecture': 'x86_64',
         }
         expected_params = dict(memory_size=256, **existing_params)
         expected = [models.APICall(
@@ -758,6 +762,7 @@ class TestPlanLambdaFunction(BasePlannerTests):
                 'security_group_ids': [],
                 'subnet_ids': [],
                 'layers': [],
+                'architecture': 'x86_64',
             },
         ),
             models.APICall(
@@ -798,6 +803,13 @@ class TestPlanLambdaFunction(BasePlannerTests):
         role_arn = call.params['role_arn']
         assert isinstance(role_arn, Variable)
         assert role_arn.name == 'myrole-dev_role_arn'
+
+    def test_can_create_function_with_arm64(self):
+        function = create_function_resource('function_name')
+        function.architecture = 'arm64'
+        self.remote_state.declare_no_resources_exists()
+        plan = self.determine_plan(function)
+        assert plan[0].params['architecture'] == 'arm64'
 
 
 class TestPlanS3Events(BasePlannerTests):

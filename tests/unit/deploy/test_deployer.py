@@ -285,6 +285,7 @@ def create_function_resource(name):
         security_group_ids=[],
         subnet_ids=[],
         layers=[],
+        architecture='x86_64',
         reserved_concurrency=None,
     )
 
@@ -580,6 +581,7 @@ class TestDefaultsInjector(object):
             security_group_ids=[],
             subnet_ids=[],
             layers=[],
+            architecture='x86_64',
             reserved_concurrency=None,
         )
         config = Config.create()
@@ -610,6 +612,7 @@ class TestDefaultsInjector(object):
             security_group_ids=[],
             subnet_ids=[],
             layers=[],
+            architecture='x86_64',
             reserved_concurrency=None,
         )
         config = Config.create()
@@ -747,14 +750,16 @@ class TestDeploymentPackager(object):
         p.handle(config, function)
         assert function.deployment_package.filename == 'package.zip'
         lambda_packager.create_deployment_package.assert_called_with(
-            '.', config.lambda_python_version
-        )
+            '.',
+            config.lambda_python_version,
+            architecture=config.lambda_architecture)
         assert function.managed_layer.deployment_package.filename == (
             'package-layer.zip'
         )
         layer_packager.create_deployment_package.assert_called_with(
-            '.', config.lambda_python_version
-        )
+            '.',
+            config.lambda_python_version,
+            architecture=config.lambda_architecture)
 
     def test_layer_package_not_generated_if_filename_populated(self):
         generator = mock.Mock(spec=packager.BaseLambdaDeploymentPackager)

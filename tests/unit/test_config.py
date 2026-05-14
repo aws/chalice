@@ -700,3 +700,40 @@ class TestUpgradeNewDeployer(object):
             'name': 'foo',
             'resource_type': 'lambda_function',
         }
+
+
+class TestLambdaArchitecture:
+    def test_lambda_architecture_defaults_to_x86_64(self):
+        c = Config(chalice_stage='dev', config_from_disk={})
+        assert c.lambda_architecture == 'x86_64'
+
+    def test_lambda_architecture_from_config(self):
+        c = Config(chalice_stage='dev', config_from_disk={
+            'lambda_architecture': 'arm64'
+        })
+        assert c.lambda_architecture == 'arm64'
+
+    def test_lambda_architecture_per_stage(self):
+        c = Config(chalice_stage='prod', config_from_disk={
+            'stages': {
+                'prod': {
+                    'lambda_architecture': 'arm64'
+                }
+            }
+        })
+        assert c.lambda_architecture == 'arm64'
+
+    def test_lambda_architecture_per_function(self):
+        c = Config(chalice_stage='dev', config_from_disk={
+            'stages': {
+                'dev': {
+                    'lambda_functions': {
+                        'myfunction': {
+                            'lambda_architecture': 'arm64'
+                        }
+                    }
+                }
+            }
+        })
+        new_config = c.scope(chalice_stage='dev', function_name='myfunction')
+        assert new_config.lambda_architecture == 'arm64'
