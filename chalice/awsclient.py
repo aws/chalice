@@ -397,6 +397,7 @@ class TypedAWSClient(object):
         xray: Optional[bool] = None,
         timeout: OptInt = None,
         memory_size: OptInt = None,
+        ephemeral_storage: OptInt = None,
         security_group_ids: OptStrList = None,
         subnet_ids: OptStrList = None,
         layers: OptStrList = None,
@@ -419,6 +420,8 @@ class TypedAWSClient(object):
             kwargs['Timeout'] = timeout
         if memory_size is not None:
             kwargs['MemorySize'] = memory_size
+        if ephemeral_storage is not None:
+            kwargs['EphemeralStorage'] = {'Size': ephemeral_storage}
         if security_group_ids is not None and subnet_ids is not None:
             kwargs['VpcConfig'] = self._create_vpc_config(
                 security_group_ids=security_group_ids,
@@ -902,6 +905,7 @@ class TypedAWSClient(object):
         xray: Optional[bool] = None,
         timeout: OptInt = None,
         memory_size: OptInt = None,
+        ephemeral_storage: OptInt = None,
         role_arn: OptStr = None,
         subnet_ids: OptStrList = None,
         security_group_ids: OptStrList = None,
@@ -921,6 +925,7 @@ class TypedAWSClient(object):
             runtime=runtime,
             timeout=timeout,
             memory_size=memory_size,
+            ephemeral_storage=ephemeral_storage,
             role_arn=role_arn,
             xray=xray,
             subnet_ids=subnet_ids,
@@ -967,19 +972,19 @@ class TypedAWSClient(object):
         lambda_client = self._client('lambda')
         lambda_client.delete_function_concurrency(FunctionName=function_name)
 
-    def _update_function_config(
+    def _assemble_update_function_config_kwargs(
         self,
         environment_variables: StrMap,
         runtime: OptStr,
         timeout: OptInt,
         memory_size: OptInt,
+        ephemeral_storage: OptInt,
         role_arn: OptStr,
         subnet_ids: OptStrList,
         security_group_ids: OptStrList,
-        function_name: str,
         layers: OptStrList,
         xray: Optional[bool],
-    ) -> None:
+    ) -> Dict[str, Any]:
         kwargs: Dict[str, Any] = {}
         if environment_variables is not None:
             kwargs['Environment'] = {'Variables': environment_variables}
@@ -989,6 +994,8 @@ class TypedAWSClient(object):
             kwargs['Timeout'] = timeout
         if memory_size is not None:
             kwargs['MemorySize'] = memory_size
+        if ephemeral_storage is not None:
+            kwargs['EphemeralStorage'] = {'Size': ephemeral_storage}
         if role_arn is not None:
             kwargs['Role'] = role_arn
         if xray:
@@ -999,6 +1006,34 @@ class TypedAWSClient(object):
             )
         if layers is not None:
             kwargs['Layers'] = layers
+        return kwargs
+
+    def _update_function_config(
+        self,
+        environment_variables: StrMap,
+        runtime: OptStr,
+        timeout: OptInt,
+        memory_size: OptInt,
+        ephemeral_storage: OptInt,
+        role_arn: OptStr,
+        subnet_ids: OptStrList,
+        security_group_ids: OptStrList,
+        function_name: str,
+        layers: OptStrList,
+        xray: Optional[bool],
+    ) -> None:
+        kwargs = self._assemble_update_function_config_kwargs(
+            environment_variables,
+            runtime,
+            timeout,
+            memory_size,
+            ephemeral_storage,
+            role_arn,
+            subnet_ids,
+            security_group_ids,
+            layers,
+            xray,
+        )
         if kwargs:
             self._do_update_function_config(function_name, kwargs)
 

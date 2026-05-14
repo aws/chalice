@@ -567,6 +567,7 @@ class ApplicationGraphBuilder(object):
             tags=config.tags,
             timeout=config.lambda_timeout,
             memory_size=config.lambda_memory_size,
+            ephemeral_storage=config.lambda_ephemeral_storage,
             deployment_package=deployment,
             role=role,
             security_group_ids=security_group_ids,
