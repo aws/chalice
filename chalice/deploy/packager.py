@@ -269,7 +269,8 @@ class BaseLambdaDeploymentPackager(object):
     ) -> Iterator[Tuple[str, str]]:
         libdir = self._osutils.joinpath(project_dir, self._CHALICE_LIB_DIR)
         if self._osutils.directory_exists(libdir):
-            for rootdir, _, filenames in self._osutils.walk(libdir):
+            for rootdir, _, filenames in self._osutils.walk(libdir,
+                                                            followlinks=True):
                 for filename in filenames:
                     fullpath = self._osutils.joinpath(rootdir, filename)
                     zip_path = self._osutils.joinpath(

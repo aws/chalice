@@ -313,6 +313,20 @@ def test_subsequent_deploy_replaces_vendor_dir(tmpdir, chalice_deployer):
 
 
 @slow
+def test_chalicelib_symlink_included(tmpdir, chalice_deployer):
+    appdir = _create_app_structure(tmpdir)
+    extra_package = tmpdir.mkdir('mypackage')
+    extra_package.join('__init__.py').write('# Test package')
+    chalicelib = appdir.mkdir('chalicelib')
+    os.symlink(str(extra_package), str(chalicelib.join('otherpackage')))
+    name = chalice_deployer.create_deployment_package(
+        str(appdir), 'python2.7')
+    with zipfile.ZipFile(name) as f:
+        _assert_in_zip('chalicelib/otherpackage/__init__.py',
+                       b'# Test package', f)
+
+
+@slow
 def test_vendor_symlink_included(tmpdir, chalice_deployer):
     appdir = _create_app_structure(tmpdir)
     extra_package = tmpdir.mkdir('mypackage')
