@@ -400,6 +400,7 @@ class TypedAWSClient(object):
         security_group_ids: OptStrList = None,
         subnet_ids: OptStrList = None,
         layers: OptStrList = None,
+        architecture: OptStr = None,
     ) -> str:
         # pylint: disable=too-many-locals
         kwargs: Dict[str, Any] = {
@@ -426,6 +427,8 @@ class TypedAWSClient(object):
             )
         if layers is not None:
             kwargs['Layers'] = layers
+        if architecture is not None:
+            kwargs['Architectures'] = [architecture]
         arn, state = self._create_lambda_function(kwargs)
         # Avoid the GetFunctionConfiguration call unless
         # we're not immediately active.
@@ -906,6 +909,7 @@ class TypedAWSClient(object):
         subnet_ids: OptStrList = None,
         security_group_ids: OptStrList = None,
         layers: OptStrList = None,
+        architecture: OptStr = None,
     ) -> Dict[str, Any]:
         """Update a Lambda function's code and configuration.
 
@@ -914,7 +918,9 @@ class TypedAWSClient(object):
         the targeted lambda function.
         """
         return_value = self._update_function_code(
-            function_name=function_name, zip_contents=zip_contents
+            function_name=function_name,
+            zip_contents=zip_contents,
+            architecture=architecture,
         )
         self._update_function_config(
             environment_variables=environment_variables,
@@ -933,12 +939,21 @@ class TypedAWSClient(object):
         return return_value
 
     def _update_function_code(
-        self, function_name: str, zip_contents: str
+        self,
+        function_name: str,
+        zip_contents: str,
+        architecture: OptStr = None,
     ) -> Dict[str, Any]:
         lambda_client = self._client('lambda')
+        kwargs = {
+            'FunctionName': function_name,
+            'ZipFile': zip_contents
+        }
+        if architecture is not None:
+            kwargs['Architectures'] = [architecture]
         try:
             result = lambda_client.update_function_code(
-                FunctionName=function_name, ZipFile=zip_contents
+                **kwargs
             )
         except _REMOTE_CALL_ERRORS as e:
             context = LambdaErrorContext(

@@ -573,6 +573,7 @@ class ApplicationGraphBuilder(object):
             subnet_ids=subnet_ids,
             reserved_concurrency=config.reserved_concurrency,
             layers=lambda_layers,
+            architecture=config.lambda_architecture,
             managed_layer=self._get_managed_lambda_layer(config),
             xray=config.xray_enabled,
         )
