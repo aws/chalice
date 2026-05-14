@@ -1363,6 +1363,17 @@ class TestSAMTemplate(TemplateTestBase):
             },
         }
 
+    def test_can_generate_rest_api_with_xray(
+            self, sample_app_with_auth):
+        config = Config.create(chalice_app=sample_app_with_auth,
+                               project_dir='.',
+                               api_gateway_stage='api',
+                               xray=True
+                               )
+        template = self.generate_template(config)
+        resources = template['Resources']
+        assert resources['RestAPI']['Properties']['TracingEnabled'] is True
+
     def test_can_generate_rest_api_without_compression(
             self, sample_app_with_auth):
         config = Config.create(chalice_app=sample_app_with_auth,
@@ -1400,6 +1411,7 @@ class TestSAMTemplate(TemplateTestBase):
         assert resources['RestAPI']['Type'] == 'AWS::Serverless::Api'
         assert resources['RestAPI']['Properties']['MinimumCompressionSize'] \
             == 100
+        assert 'TracingEnabled' not in resources['RestAPI']['Properties']
         # We should also create the auth lambda function.
         assert resources['Myauth']['Type'] == 'AWS::Serverless::Function'
         # Along with permission to invoke from API Gateway.
