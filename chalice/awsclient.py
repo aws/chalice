@@ -945,7 +945,7 @@ class TypedAWSClient(object):
         architecture: OptStr = None,
     ) -> Dict[str, Any]:
         lambda_client = self._client('lambda')
-        kwargs = {
+        kwargs: Dict[str, Any] = {
             'FunctionName': function_name,
             'ZipFile': zip_contents
         }

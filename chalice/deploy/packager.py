@@ -395,8 +395,10 @@ class AppOnlyDeploymentPackager(BaseLambdaDeploymentPackager):
         )
 
     def _deployment_package_filename(
-        self, project_dir: str, python_version: str, prefix: str = ''
+        self, project_dir: str, python_version: str, prefix: str = '',
+        architecture: str = 'x86_64'
     ) -> str:
+        # architecture is unused; this zip only contains app source code.
         h = hashlib.md5(b'')
         for filename, _ in self._iter_app_filenames(project_dir):
             with self._osutils.open(filename, 'rb') as f:
