@@ -377,7 +377,7 @@ Below is the code for the ``/login`` route:
   :lineno-match:
   :pyobject: login
 
-In this login view, we first lookup the user record fom our users DB,
+In this login view, we first lookup the user record from our users DB,
 and then try to generate a JWT token for this entry.  The
 ``auth.get_jwt_token`` will first verify that the password hash
 matches what's stored in our users DB, and then generate a JWT token
