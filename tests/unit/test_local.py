@@ -596,12 +596,18 @@ def test_multi_value_header(handler):
     ('/names/bar/wrong', None),
     ('/a/z/c', '/a/{capture}/c'),
     ('/a/b/c', '/a/b/c'),
+    ('/x', None),
+    ('/x/foo', '/x/{proxy+}'),
+    ('/x/foo/bar', '/x/{proxy+}'),
+    ('/y/foo/bar', '/y/{capture}/{proxy+}'),
+    ('/y/foo/bar/baz', '/y/{capture}/{proxy+}'),
 ])
 def test_can_match_exact_route(actual_url, matched_url):
     matcher = local.RouteMatcher([
         '/foo', '/foo/{capture}', '/foo/bar',
         '/names/{capture}',
-        '/a/{capture}/c', '/a/b/c'
+        '/a/{capture}/c', '/a/b/c',
+        '/x/{proxy+}', '/y/{capture}/{proxy+}'
     ])
     if matched_url is not None:
         assert matcher.match_route(actual_url).route == matched_url

@@ -229,6 +229,11 @@ def repr_raw_body():
     return {'repr-raw-body': app.current_request.raw_body.decode('utf-8')}
 
 
+@app.route('/catch-all/{proxy+}', methods=['GET'])
+def catch_all(proxy):
+    return {'proxy': proxy}
+
+
 SOCKET_MESSAGES = []
 
 
