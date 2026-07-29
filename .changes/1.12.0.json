@@ -3,17 +3,17 @@
   "changes": [
     {
       "category": "CLI",
-      "description": "Add ``generate-models`` command\n(`#1245 <https://github.com/aws/chalice/pull/1245>`__)",
+      "description": "Add ``generate-models`` command (#1245)",
       "type": "feature"
     },
     {
       "category": "websocket",
-      "description": "Add ``close`` and ``info`` commands to websocket api\n(`#1259 <https://github.com/aws/chalice/pull/1259>`__)",
+      "description": "Add ``close`` and ``info`` commands to websocket api (#1259)",
       "type": "enhancement"
     },
     {
       "category": "dependencies",
-      "description": "Bump upper bound on PIP to ``<19.4``\n(`#1273 <https://github.com/aws/chalice/pull/1273>`__)\n(`#1272 <https://github.com/aws/chalice/pull/1272>`__)",
+      "description": "Bump upper bound on PIP to ``<19.4`` (#1273, #1272)",
       "type": "enhancement"
     }
   ]

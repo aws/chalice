@@ -148,16 +148,13 @@ class Config(object):
         # we attempt to match your python version to the closest version
         # supported by lambda.
         major, minor = sys.version_info[0], sys.version_info[1]
-        if major == 2:
-            return 'python2.7'
-        # Python 3 for backwards compatibility needs to select python3.6
-        # for python versions 3.0-3.6. 3.7-3.10 will use their version.
-        # 3.11 and higher will use 3.11
-        elif (major, minor) <= (3, 6):
-            return 'python3.6'
-        elif (major, minor) <= (3, 10):
-            return 'python%s.%s' % (major, minor)
-        return 'python3.11'
+        if (major, minor) < (3, 10):
+            return 'python3.10'
+        elif (major, minor) <= (3, 13):
+            # Otherwise we use your current version of python if Lambda
+            # supports it.
+            return f'python{major}.{minor}'
+        return 'python3.14'
 
     @property
     def log_retention_in_days(self) -> int:

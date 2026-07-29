@@ -94,10 +94,10 @@ class ARNMatcher(object):
         self._arn = target_arn
 
     def _resource_match(self, resource: str) -> bool:
-        # Arn matching supports two special case characetrs that are not
+        # Arn matching supports two special case characters that are not
         # escapable. * represents a glob which translates to a non-greedy
         # match of any number of characters. ? which is any single character.
-        # These are easy to translate to a regex using .*? and . respectivly.
+        # These are easy to translate to a regex using .*? and . respectively.
         escaped_resource = re.escape(resource)
         resource_regex = escaped_resource.replace(r'\?', '.').replace(
             r'\*', '.*?')
@@ -279,7 +279,7 @@ class LambdaContext(object):
         # documentation:
         # Information about the client application and device when invoked
         # through the AWS Mobile SDK, it can be null.
-        # Chalice local doens't need to set these since they are specifically
+        # Chalice local doesn't need to set these since they are specifically
         # for the mobile SDK.
         self.identity = None
         self.client_context = None
@@ -330,7 +330,7 @@ class LocalGatewayAuthorizer(object):
                     # users to test their code local with a different cognito
                     # authorization flow.
                     warnings.warn(
-                        '%s for machine-to-machine communicaiton is not '
+                        '%s for machine-to-machine communication is not '
                         'supported in local mode. All requests made against '
                         'a route will be authorized to allow local testing.'
                         % authorizer.__class__.__name__
@@ -680,7 +680,7 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     for reuse. In the single threaded model this causes Chalice local to become
     unresponsive to all clients other than that browser socket. Even sending a
     header requesting that the client close the connection is not good enough,
-    the browswer will simply open another one and sit on it.
+    the browser will simply open another one and sit on it.
     """
 
     daemon_threads = True

@@ -3,27 +3,27 @@
   "changes": [
     {
       "category": "deployment",
-      "description": "Fix issue where role name to arn lookup was failing due to lack of pagination\n(`#139 <https://github.com/awslabs/chalice/issues/139>`__)",
+      "description": "Fix issue where role name to arn lookup was failing due to lack of pagination (#139)",
       "type": "bugfix"
     },
     {
       "category": "rest-api",
-      "description": "Raise errors when unknown kwargs are provided to ``app.route(...)``\n(`#144 <https://github.com/awslabs/chalice/pull/144>`__)",
+      "description": "Raise errors when unknown kwargs are provided to ``app.route(...)`` (#144)",
       "type": "enhancement"
     },
     {
       "category": "config",
-      "description": "Raise validation error when configuring CORS and an OPTIONS method\n(`#142 <https://github.com/awslabs/chalice/issues/142>`__)",
+      "description": "Raise validation error when configuring CORS and an OPTIONS method (#142)",
       "type": "enhancement"
     },
     {
       "category": "rest-api",
-      "description": "Add support for multi-file applications\n(`#21 <https://github.com/awslabs/chalice/issues/21>`__)",
+      "description": "Add support for multi-file applications (#21)",
       "type": "feature"
     },
     {
       "category": "local",
-      "description": "Add support for ``chalice local``, which runs a local HTTP server for testing\n(`#22 <https://github.com/awslabs/chalice/issues/22>`__)",
+      "description": "Add support for ``chalice local``, which runs a local HTTP server for testing (#22)",
       "type": "feature"
     }
   ]

@@ -746,6 +746,34 @@ class TestTerraformTemplate(TemplateTestBase):
                    'maximum_batching_window_in_seconds': 0
         }
 
+    def test_can_package_sqs_handler_with_max_concurrency(self, sample_app):
+        @sample_app.on_sqs_message(
+            queue='foo',
+            batch_size=5,
+            maximum_concurrency=2
+        )
+        def handler(event):
+            pass
+
+        config = Config.create(chalice_app=sample_app,
+                               project_dir='.',
+                               app_name='sample_app',
+                               api_gateway_stage='api')
+        template = self.generate_template(config)
+
+        assert template['resource'][
+                   'aws_lambda_event_source_mapping'][
+                   'handler-sqs-event-source'] == {
+                   'event_source_arn': (
+                       'arn:${data.aws_partition.chalice.partition}:sqs'
+                       ':${data.aws_region.chalice.name}:'
+                       '${data.aws_caller_identity.chalice.account_id}:foo'),
+                   'function_name': '${aws_lambda_function.handler.arn}',
+                   'batch_size': 5,
+                   'maximum_batching_window_in_seconds': 0,
+                   'scaling_config': {'maximum_concurrency': 2}
+        }
+
     def test_sqs_arn_does_not_use_fn_sub(self, sample_app):
         @sample_app.on_sqs_message(queue_arn='arn:foo:bar', batch_size=5)
         def handler(event):
@@ -1732,6 +1760,37 @@ class TestSAMTemplate(TemplateTestBase):
                     },
                     'BatchSize': 5,
                     'MaximumBatchingWindowInSeconds': 0,
+                },
+            }
+        }
+
+    def test_can_package_sqs_handler_with_max_concurrency(self, sample_app):
+        @sample_app.on_sqs_message(
+            queue='foo',
+            batch_size=5,
+            maximum_concurrency=2
+        )
+        def handler(event):
+            pass
+
+        config = Config.create(chalice_app=sample_app,
+                               project_dir='.',
+                               api_gateway_stage='api')
+        template = self.generate_template(config)
+        sns_handler = template['Resources']['Handler']
+        assert sns_handler['Properties']['Events'] == {
+            'HandlerSqsEventSource': {
+                'Type': 'SQS',
+                'Properties': {
+                    'Queue': {
+                        'Fn::Sub': (
+                            'arn:${AWS::Partition}:sqs:${AWS::Region}'
+                            ':${AWS::AccountId}:foo'
+                        )
+                    },
+                    'BatchSize': 5,
+                    'MaximumBatchingWindowInSeconds': 0,
+                    'ScalingConfig': {'MaximumConcurrency': 2}
                 },
             }
         }

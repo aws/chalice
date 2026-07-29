@@ -157,7 +157,8 @@ def test_can_provide_optional_start_time_iter_logs(stubbed_session):
     # because the loss of precision in sub ms time.
     datetime_now = datetime.datetime.utcfromtimestamp(timestamp / 1000.0)
     stubbed_session.stub('logs').filter_log_events(
-        logGroupName='loggroup', interleaved=True).returns({
+        logGroupName='loggroup', interleaved=True,
+        startTime=timestamp).returns({
             "events": [{
                 "logStreamName": "logStreamName",
                 "timestamp": timestamp,
@@ -2009,7 +2010,7 @@ class TestCreateLambdaFunction(object):
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
         with pytest.raises(LambdaClientError) as excinfo:
-            awsclient.create_function('name', 'myarn', b'foo', 'pytohn2.7',
+            awsclient.create_function('name', 'myarn', b'foo', 'python2.7',
                                       'app.app')
         assert isinstance(
             excinfo.value.original_error, botocore.exceptions.ClientError)

@@ -165,7 +165,7 @@ class Boto3ClientMethodCallType(Boto3ClientMethodType):
 
 class TypedSymbol(symtable.Symbol):
     inferred_type = None  # type: Any
-    ast_node = None  # type: ast.AST
+    ast_node = None  # type: Optional[ast.AST]
 
 
 class FunctionType(BaseType):
@@ -191,6 +191,13 @@ class StringLiteral(object):
     def __init__(self, value):
         # type: (str) -> None
         self.value = value
+
+
+def get_string_literal_value(node):
+    # type: (ast.AST) -> Optional[str]
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    return None
 
 
 class ParsedCode(object):
@@ -301,11 +308,11 @@ class ChainedSymbolTable(object):
         symbol = self._local_table.lookup(name)
         if symbol.is_global():
             symbol = self._global_table.lookup(name)
-        try:
-            return cast(TypedSymbol, symbol).ast_node
-        except AttributeError:
+        ast_node = getattr(cast(TypedSymbol, symbol), 'ast_node', None)
+        if ast_node is None:
             raise ValueError(
                 "No AST node registered for symbol: %s" % name)
+        return ast_node
 
     def has_ast_node_for_symbol(self, name):
         # type: (str) -> bool
@@ -411,8 +418,9 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
         rhs_inferred_type = self._get_inferred_type_for_node(node.value)
         if rhs_inferred_type is None:
             # Special casing assignment to a string literal.
-            if isinstance(node.value, ast.Str):
-                rhs_inferred_type = StringLiteral(node.value.s)
+            string_value = get_string_literal_value(node.value)
+            if string_value is not None:
+                rhs_inferred_type = StringLiteral(string_value)
                 self._set_inferred_type_for_node(node.value, rhs_inferred_type)
         for t in node.targets:
             if isinstance(t, ast.Name):
@@ -451,9 +459,10 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
             # e_0(e_1) : B3CT[e_1]
             if len(node.args) >= 1:
                 service_arg = node.args[0]
-                if isinstance(service_arg, ast.Str):
+                service_name = get_string_literal_value(service_arg)
+                if service_name is not None:
                     self._set_inferred_type_for_node(
-                        node, Boto3ClientType(service_arg.s))
+                        node, Boto3ClientType(service_name))
                 elif isinstance(self._get_inferred_type_for_node(service_arg),
                                 StringLiteral):
                     sub_type = self._get_inferred_type_for_node(service_arg)

@@ -1,0 +1,32 @@
+# Changelog
+
+{% for release, changes in releases %}
+## v{{ release }}
+{% if changes.summary %}
+{{ changes.summary -}}
+{% endif %}
+{%- for type_name in ['feature', 'enhancement', 'bugfix'] %}
+{%- for change in changes.changes if change.type == type_name %}
+{%- if loop.first %}
+{%- if type_name == 'feature' %}
+
+### Features
+{%- elif type_name == 'enhancement' %}
+
+### Enhancements
+{%- elif type_name == 'bugfix' %}
+
+### Bug fixes
+{%- endif %}
+{%- endif %}
+* {{ change.description }}
+{%- endfor %}
+{%- endfor %}
+{%- for change in changes.changes if change.type not in ['feature', 'enhancement', 'bugfix'] %}
+{%- if loop.first %}
+
+### Other
+{%- endif %}
+* {{ change.description }}
+{%- endfor %}
+{% endfor %}

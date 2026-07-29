@@ -157,7 +157,7 @@ Environment Variables
 
 As part of the packaging and deployment process, Chalice will import your
 ``app.py`` file.  This will result in any top level module code being
-executed.  This can sometimes have undesireable behavior.
+executed.  This can sometimes have undesirable behavior.
 When running any Chalice CLI commands, a ``AWS_CHALICE_CLI_MODE`` environment
 variable is set.  You can check if this env var is set in your ``app.py``
 if you have code that you don't want to run whenever your app is packaged

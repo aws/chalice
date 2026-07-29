@@ -76,13 +76,11 @@ class BaseLambdaDeploymentPackager(object):
     _VENDOR_DIR = 'vendor'
 
     _RUNTIME_TO_ABI = {
-        'python2.7': 'cp27mu',
-        'python3.6': 'cp36m',
-        'python3.7': 'cp37m',
-        'python3.8': 'cp38',
-        'python3.9': 'cp39',
         'python3.10': 'cp310',
         'python3.11': 'cp311',
+        'python3.12': 'cp312',
+        'python3.13': 'cp313',
+        'python3.14': 'cp314',
     }
 
     def __init__(
@@ -124,7 +122,7 @@ class BaseLambdaDeploymentPackager(object):
         # based on a hash of the requirements file.
         # This is done so that we only "pip install -r requirements.txt"
         # when we know there's new dependencies we need to install.
-        # The python version these depedencies were downloaded for is appended
+        # The python version these dependencies were downloaded for is appended
         # to the end of the filename since the the dependencies may not change
         # but if the python version changes then the dependencies need to be
         # re-downloaded since they will not be compatible.
@@ -178,8 +176,7 @@ class BaseLambdaDeploymentPackager(object):
             chalice_init = chalice_init[:-1]
         yield (chalice_init, 'chalice/__init__.py')
         yield (self._osutils.joinpath(project_dir, 'app.py'), 'app.py')
-        for filename in self._iter_chalice_lib_if_needed(project_dir):
-            yield filename
+        yield from self._iter_chalice_lib_if_needed(project_dir)
 
     def _hash_project_dir(
         self, requirements_filename: str, vendor_dir: str, project_dir: str
@@ -501,6 +498,9 @@ class DependencyBuilder(object):
         'cp38': (2, 26),
         'cp310': (2, 26),
         'cp311': (2, 26),
+        'cp312': (2, 34),
+        'cp313': (2, 34),
+        'cp314': (2, 34),
     }
     # Fallback version if we're on an unknown python version
     # not in _RUNTIME_GLIBC.
@@ -618,8 +618,8 @@ class DependencyBuilder(object):
     def _download_all_dependencies(
         self, requirements_filename: str, directory: str
     ) -> Set[Package]:
-        # Download dependencies prefering wheel files but falling back to
-        # raw source dependences to get the transitive closure over
+        # Download dependencies preferring wheel files but falling back to
+        # raw source dependencies to get the transitive closure over
         # the dependency graph. Return the set of all package objects
         # which will serve as the master list of dependencies needed to deploy
         # successfully.
@@ -637,8 +637,26 @@ class DependencyBuilder(object):
         # Try to get binary wheels for each package that isn't compatible.
         logger.debug("Downloading manylinux wheels: %s", packages)
         self._pip.download_manylinux_wheels(
-            abi, [pkg.identifier for pkg in packages], directory
+            abi,
+            [pkg.identifier for pkg in packages],
+            directory,
+            self._get_pip_platforms(abi),
         )
+
+    def _get_pip_platforms(self, abi: str) -> List[str]:
+        # Pip treats --platform as a literal tag and does not auto-include
+        # lower manylinux_X_Y versions, so we enumerate every glibc minor up
+        # to the runtime's. The trailing manylinux2014_x86_64 alias engages
+        # pip's legacy compatibility hierarchy (manylinux1, manylinux2010).
+        runtime_major, runtime_minor = self._RUNTIME_GLIBC.get(
+            abi, self._DEFAULT_GLIBC
+        )
+        platforms = [
+            'manylinux_%s_%s_x86_64' % (runtime_major, minor)
+            for minor in range(17, runtime_minor + 1)
+        ]
+        platforms.append('manylinux2014_x86_64')
+        return platforms
 
     def _download_sdists(self, packages: Set[Package], directory: str) -> None:
         logger.debug("Downloading missing sdists: %s", packages)
@@ -715,7 +733,7 @@ class DependencyBuilder(object):
         # - lambda incompatible wheel files
         # Pip will give us a wheel when it can, but some distributions do not
         # ship with wheels at all in which case we will have an sdist for it.
-        # In some cases a platform specific wheel file may be availble so pip
+        # In some cases a platform specific wheel file may be available so pip
         # will have downloaded that, if our platform does not match the
         # platform lambda runs on (linux_x86_64/manylinux) then the downloaded
         # wheel file may not be compatible with lambda. Pure python wheels
@@ -1132,8 +1150,8 @@ class PipRunner(object):
         # When downloading all dependencies we expect to get an rc of 0 back
         # since we are casting a wide net here letting pip have options about
         # what to download. If a package is not found it is likely because it
-        # does not exist and was mispelled. In this case we raise an error with
-        # the package name. Otherwise a nonzero rc results in a generic
+        # does not exist and was misspelled. In this case we raise an error
+        # with the package name. Otherwise a nonzero rc results in a generic
         # download error where we pass along the stderr.
         if rc != 0:
             if err is None:
@@ -1163,7 +1181,11 @@ class PipRunner(object):
             self.build_wheel(wheel_package_path, directory)
 
     def download_manylinux_wheels(
-        self, abi: str, packages: List[str], directory: str
+        self,
+        abi: str,
+        packages: List[str],
+        directory: str,
+        platforms: Optional[List[str]] = None,
     ) -> None:
         """Download wheel files for manylinux for all the given packages."""
         # If any one of these dependencies fails pip will bail out. Since we
@@ -1171,23 +1193,21 @@ class PipRunner(object):
         # each package to pip individually. The return code of pip doesn't
         # matter here since we will inspect the working directory to see which
         # wheels were downloaded. We are only interested in wheel files
-        # compatible with lambda, which means manylinux1_x86_64 platform and
+        # compatible with lambda, which means a manylinux x86_64 platform and
         # cpython implementation. The compatible abi depends on the python
         # version and is checked later.
+        if platforms is None:
+            platforms = ['manylinux2014_x86_64']
         for package in packages:
-            arguments = [
-                '--only-binary=:all:',
-                '--no-deps',
-                '--platform',
-                'manylinux2014_x86_64',
-                '--implementation',
-                'cp',
-                '--abi',
-                abi,
-                '--dest',
-                directory,
+            arguments = ['--only-binary=:all:', '--no-deps']
+            for platform in platforms:
+                arguments.extend(['--platform', platform])
+            arguments.extend([
+                '--implementation', 'cp',
+                '--abi', abi,
+                '--dest', directory,
                 package,
-            ]
+            ])
             self._execute('download', arguments)
 
     def download_sdists(self, packages: List[str], directory: str) -> None:

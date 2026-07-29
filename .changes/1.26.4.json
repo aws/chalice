@@ -4,7 +4,7 @@
     {
       "type": "bugfix",
       "category": "Terraform",
-      "description": "Use updated keywords for providing provider version contraints (#1717)"
+      "description": "Use updated keywords for providing provider version constraints (#1717)"
     }
   ]
 }

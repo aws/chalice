@@ -3,17 +3,17 @@
   "changes": [
     {
       "category": "local",
-      "description": "Fix local mode issue with unicode responses and Content-Length\n(`#910 <https://github.com/aws/chalice/pull/910>`__)",
+      "description": "Fix local mode issue with unicode responses and Content-Length (#910)",
       "type": "bugfix"
     },
     {
       "category": "dev",
-      "description": "Fix issue with ``requirements-dev.txt`` not setting up a working\ndev environment\n(`#920 <https://github.com/aws/chalice/pull/920>`__)",
+      "description": "Fix issue with ``requirements-dev.txt`` not setting up a working\ndev environment (#920)",
       "type": "enhancement"
     },
     {
       "category": "dependencies",
-      "description": "Add support for pip 18\n(`#910 <https://github.com/aws/chalice/pull/908>`__)",
+      "description": "Add support for pip 18 (#910)",
       "type": "enhancement"
     }
   ]

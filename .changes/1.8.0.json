@@ -3,12 +3,12 @@
   "changes": [
     {
       "category": "packaging",
-      "description": "Fall back to pure python version of yaml parser\nwhen unable to compile C bindings for PyYAML\n(`#1074 <https://github.com/aws/chalice/issues/1074>`__)",
+      "description": "Fall back to pure python version of yaml parser\nwhen unable to compile C bindings for PyYAML (#1074)",
       "type": "bugfix"
     },
     {
       "category": "packaging",
-      "description": "Add support for Lambda layers.\n(`#1001 <https://github.com/aws/chalice/issues/1001>`__)",
+      "description": "Add support for Lambda layers. (#1001)",
       "type": "feature"
     }
   ]

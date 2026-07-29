@@ -304,10 +304,10 @@ def find_skips_in_seq(numbers):
 
 
 def test_websocket_redployment_does_not_lose_messages(smoke_test_app_ws):
-    # This test is to check if one persistant connection is affected by an app
-    # redeployment. A connetion is made to the app, and a sequence of numbers
+    # This test is to check if one persistent connection is affected by an app
+    # redeployment. A connection is made to the app, and a sequence of numbers
     # is sent over the socket and written to a DynamoDB table. The app is
-    # redeployed in a seprate thread. After the redeployment we wait a
+    # redeployed in a separate thread. After the redeployment we wait a
     # second to ensure more numbers have been sent. Finally we inspect the
     # DynamoDB table to ensure there are no gaps in the numbers we saw on the
     # server side, and that the first and last number we sent is also present.

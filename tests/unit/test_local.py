@@ -42,7 +42,7 @@ class FakeTimeSource(object):
     def time(self):
         """Get the next time.
 
-        This is for mimicing the Clock interface used in local.
+        This is for mimicking the Clock interface used in local.
         """
         time = self._times.pop(0)
         return time
@@ -960,7 +960,7 @@ class TestLocalBuiltinAuthorizers(object):
         path = '/iam'
         event = create_event(path, 'GET', {})
         context = LambdaContext(*lambda_context_args)
-        with pytest.warns(None) as recorded_warnings:
+        with pytest.warns(Warning) as recorded_warnings:
             new_event, new_context = authorizer.authorize(path, event, context)
         assert event == new_event
         assert context == new_context
@@ -1043,7 +1043,7 @@ class TestLocalBuiltinAuthorizers(object):
         event = create_event(path, 'GET', {})
         event["headers"]["authorization"] = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhYWFhYWFhYS1iYmJiLWNjY2MtZGRkZC1lZWVlZWVlZWVlZWUiLCJhdWQiOiJ4eHh4eHh4eHh4eHhleGFtcGxlIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInRva2VuX3VzZSI6ImlkIiwiYXV0aF90aW1lIjoxNTAwMDA5NDAwLCJpc3MiOiJodHRwczovL2NvZ25pdG8taWRwLnVzLWVhc3QtMS5hbWF6b25hd3MuY29tL3VzLWVhc3QtMV9leGFtcGxlIiwiZXhwIjoxNTg0NzIzNjE2LCJnaXZlbl9uYW1lIjoiSmFuZSIsImlhdCI6MTUwMDAwOTQwMCwiZW1haWwiOiJqYW5lZG9lQGV4YW1wbGUuY29tIiwianRpIjoiZDdlMTEzM2EtMWUzYS00MjMxLWFlN2ItMjhkODVlZTBiMTRkIn0.SN5n-A3kxboNYg0sGIOipVUksCdn6xRJmAK9kSZof10"  # noqa
         context = LambdaContext(*lambda_context_args)
-        with pytest.warns(None) as recorded_warnings:
+        with pytest.warns(Warning) as recorded_warnings:
             new_event, new_context = authorizer.authorize(path, event, context)
         assert event == new_event
         assert context == new_context
@@ -1051,7 +1051,7 @@ class TestLocalBuiltinAuthorizers(object):
         warning = recorded_warnings[0]
         assert issubclass(warning.category, UserWarning)
         assert ('CognitoUserPoolAuthorizer for machine-to-machine '
-                'communicaiton is not supported in local mode. All requests '
+                'communication is not supported in local mode. All requests '
                 'made against a route will be authorized to allow local '
                 'testing.') in str(warning.message)
 

@@ -250,7 +250,7 @@ def test_can_accept_multiple_connections(config, sample_app,
                                          local_server_factory):
     # When a GET request is made to Chalice from a browser, it will send the
     # connection keep-alive header in order to hold the connection open and
-    # reuse it for subsequent requests. If the conncetion close header is sent
+    # reuse it for subsequent requests. If the connection close header is sent
     # back by the server the connection will be closed, but the browser will
     # reopen a new connection just in order to have it ready when needed.
     # In this case, since it does not send any content we do not have the

@@ -1,4 +1,4 @@
-"""Control plane APIs for programatically building/deploying Chalice apps.
+"""Control plane APIs for programmatically building/deploying Chalice apps.
 
 The eventual goal is to expose this as a public API that other tools can use
 in their own integrations with Chalice, but this will need time for the APIs

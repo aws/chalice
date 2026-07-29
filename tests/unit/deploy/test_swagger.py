@@ -840,7 +840,7 @@ def test_can_custom_resource_policy(sample_app, swagger_gen):
                 "Action": "execute-api:Invoke",
                 "Resource": [
                     "arn:aws:execute-api:*:*:*",
-                    "arn:aws:exceute-api:*:*:*/*"
+                    "arn:aws:execute-api:*:*:*/*"
                 ],
                 "Condition": {
                     "StringEquals": {
@@ -861,7 +861,7 @@ def test_can_custom_resource_policy(sample_app, swagger_gen):
             'Principal': '*',
             'Resource': [
                 'arn:aws:execute-api:*:*:*',
-                "arn:aws:exceute-api:*:*:*/*"]
+                "arn:aws:execute-api:*:*:*/*"]
             }]
     }
 

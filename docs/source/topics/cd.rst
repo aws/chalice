@@ -42,10 +42,10 @@ version, ``v2``, is recommended.  The version can be specified using the
 * The ``v2`` buildspec uses `runtime-versions <https://docs.aws.amazon.com/codebuild/latest/userguide/build-spec-ref.html#build-spec.phases.install.runtime-versions>`__
   to configure which version of Python to use instead of a Python
   version specific CodeBuild image.  For ``v2`` templates the
-  ``aws/codebuild/amazonlinux2-x86_64-standard`` image.
+  ``aws/codebuild/amazonlinux2023-x86_64-standard`` image.
 
-**The v2 pipeline template requires Python 3.7 or higher.** If you're using
-Python versions less than 3.7 you must use the ``v1`` pipeline template.
+**The v2 pipeline template requires Python 3.10 or higher.** If you're using
+Python versions less than 3.10 you must use the ``v1`` pipeline template.
 
 
 Usage example
@@ -114,7 +114,7 @@ set up, you can find the documentation on how to do that
 You can retrieve the CodeCommit clone URL by searching for the
 ``SourceRepoURL`` in the CloudFormation stack output::
 
-    $ aws cloudformation describe-stacks --stack-name mysack \
+    $ aws cloudformation describe-stacks --stack-name mystack \
        --query "Stacks[0].Outputs[?OutputKey=='SourceRepoURL'] | [0].OutputValue"
 
 
@@ -243,7 +243,7 @@ Now we're ready to deploy our CloudFormation template using the AWS CLI.  Be
 sure to replace the ``GithubOwner`` and ``GithubRepoName`` with your own
 values for your GitHub repository.  You'll also need to specify the
 ``GithubRepoSecretId`` and ``GithubRepoSecretJSONKey`` if you used values
-other than the default vaues of ``GithubRepoAccess`` and ``OAuthToken`` when
+other than the default values of ``GithubRepoAccess`` and ``OAuthToken`` when
 creating your secret in Secrets Manager.
 
 ::

@@ -3,12 +3,12 @@
   "changes": [
     {
       "category": "CLI",
-      "description": "Fix issue where ``--api-gateway-stage`` was being\nignored (`#325 <https://github.com/awslabs/chalice/pull/325>`__)",
+      "description": "Fix issue where ``--api-gateway-stage`` was being\nignored  (#325)",
       "type": "bugfix"
     },
     {
       "category": "CLI",
-      "description": "Add ``chalice delete`` command\n(`#40 <https://github.com/awslabs/chalice/issues/40>`__)",
+      "description": "Add ``chalice delete`` command (#40)",
       "type": "feature"
     }
   ]

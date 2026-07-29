@@ -1,0 +1,10 @@
+{
+  "schema-version": "0.2",
+  "changes": [
+    {
+      "type": "enhancement",
+      "category": "Pip",
+      "description": "Update pip to the latest version (<25.1)"
+    }
+  ]
+}

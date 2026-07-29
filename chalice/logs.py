@@ -169,8 +169,7 @@ class LogEventGenerator(BaseLogEventGenerator):
         logs = self._client.iter_log_events(
             log_group_name=log_group_name, start_time=options.start_time
         )
-        for log_message in logs:
-            yield log_message
+        yield from logs
 
 
 class FollowLogEventGenerator(BaseLogEventGenerator):
@@ -193,12 +192,11 @@ class FollowLogEventGenerator(BaseLogEventGenerator):
     ) -> Iterator[CWLogEvent]:
         start_time = options.start_time
         try:
-            for event in self._loop_on_filter_log_events(
+            yield from self._loop_on_filter_log_events(
                 log_group_name, start_time
-            ):
-                yield event
+            )
         except KeyboardInterrupt:
-            return
+            pass
 
     def _loop_on_filter_log_events(
         self, log_group_name: str, start_time: Optional[datetime]

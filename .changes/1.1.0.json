@@ -3,32 +3,32 @@
   "changes": [
     {
       "category": "rest-api",
-      "description": "Default to ``None`` in local mode when no query parameters\nare provided\n(`#593 <https://github.com/aws/chalice/issues/593>`__)",
+      "description": "Default to ``None`` in local mode when no query parameters\nare provided (#593)",
       "type": "enhancement"
     },
     {
       "category": "local",
-      "description": "Add support for binding a custom address for local dev server\n(`#596 <https://github.com/aws/chalice/issues/596>`__)",
+      "description": "Add support for binding a custom address for local dev server (#596)",
       "type": "enhancement"
     },
     {
       "category": "rest-api",
-      "description": "Fix local mode handling of routes with trailing slashes\n(`#582 <https://github.com/aws/chalice/issues/582>`__)",
+      "description": "Fix local mode handling of routes with trailing slashes (#582)",
       "type": "bugfix"
     },
     {
       "category": "config",
-      "description": "Scale ``lambda_timeout`` parameter correctly in local mode\n(`#579 <https://github.com/aws/chalice/pull/579>`__)",
+      "description": "Scale ``lambda_timeout`` parameter correctly in local mode (#579)",
       "type": "bugfix"
     },
     {
       "category": "CI-CD",
-      "description": "Add ``--codebuild-image`` to the ``generate-pipeline`` command\n(`#609 <https://github.com/aws/chalice/issues/609>`__)",
+      "description": "Add ``--codebuild-image`` to the ``generate-pipeline`` command (#609)",
       "type": "feature"
     },
     {
       "category": "CI-CD",
-      "description": "Add ``--source`` and ``--buildspec-file`` to the\n``generate-pipeline`` command\n(`#609 <https://github.com/aws/chalice/issues/619>`__)",
+      "description": "Add ``--source`` and ``--buildspec-file`` to the\n``generate-pipeline`` command (#609)",
       "type": "feature"
     }
   ]

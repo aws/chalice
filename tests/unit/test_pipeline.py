@@ -96,7 +96,7 @@ class TestPipelineGenV2(object):
         self.pipeline_gen = pipeline.CreatePipelineTemplateV2()
 
     def generate_template(self, app_name='appname',
-                          lambda_python_version='python3.7',
+                          lambda_python_version='python3.10',
                           codebuild_image=None, code_source='github',
                           pipeline_version='v2'):
         params = PipelineParameters(
@@ -112,12 +112,12 @@ class TestPipelineGenV2(object):
     def test_new_default_codebuild_image(self):
         template = self.generate_template(app_name='app')
         assert template['Parameters']['CodeBuildImage']['Default'] == (
-            "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
+            "aws/codebuild/amazonlinux2023-x86_64-standard:5.0"
         )
 
     def test_validate_python_versions(self):
         with pytest.raises(InvalidCodeBuildPythonVersion):
-            self.generate_template(lambda_python_version='python2.7')
+            self.generate_template(lambda_python_version='python3.9')
 
     def test_uses_v2_codebuild_spec(self):
         # The codebuild v2 spec is tested separately, we just need a
@@ -245,8 +245,8 @@ def test_can_validate_python_version():
 
 
 def test_can_extract_python_version():
-    assert pipeline.PipelineParameters('app', 'python3.7').py_major_minor == (
-        '3.7')
+    assert pipeline.PipelineParameters('app', 'python3.10').py_major_minor == (
+        '3.10')
 
 
 def test_can_generate_github_source(pipeline_params):
@@ -259,10 +259,10 @@ def test_can_generate_github_source(pipeline_params):
 
 
 def test_can_create_buildspec_v2():
-    params = pipeline.PipelineParameters('myapp', 'python3.7')
+    params = pipeline.PipelineParameters('myapp', 'python3.10')
     buildspec = pipeline.create_buildspec_v2(params)
     assert buildspec['phases']['install']['runtime-versions'] == {
-        'python': '3.7',
+        'python': '3.10',
     }
 
 

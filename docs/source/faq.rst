@@ -29,7 +29,7 @@ APIs, and decorators to connect various AWS event sources to
 Lambda functions.  It then can integrate with AWS SAM by offloading
 the deployment to AWS CloudFormation.
 
-**Q: How does Chalice compare to other similiar frameworks?**
+**Q: How does Chalice compare to other similar frameworks?**
 
 The biggest difference between Chalice and other frameworks is that Chalice
 is focused on using a familiar, decorator-based API to write serverless

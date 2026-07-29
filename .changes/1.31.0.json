@@ -1,0 +1,15 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "feature",
+      "category": "Python",
+      "description": "Add support for Python 3.12 (#2086)"
+    },
+    {
+      "type": "enhancement",
+      "category": "Python",
+      "description": "Drop support for Python 3.7 (#2095)"
+    }
+  ]
+}

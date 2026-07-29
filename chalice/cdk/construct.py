@@ -1,7 +1,7 @@
 import json
 import os
 import uuid
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional, Any  # noqa
 
 from aws_cdk import (
     aws_s3_assets as assets,
@@ -12,9 +12,9 @@ from aws_cdk import (
 
 try:
     from aws_cdk.core import Construct
-    from aws_cdk import core as cdk
+    from aws_cdk import core as cdk  # noqa
 except ImportError:
-    import aws_cdk as cdk
+    import aws_cdk as cdk  # noqa
     from constructs import Construct
 
 from chalice import api

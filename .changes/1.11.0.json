@@ -3,22 +3,22 @@
   "changes": [
     {
       "category": "config",
-      "description": "Add support for stage independent lambda configuration\n(`#1162 <https://github.com/aws/chalice/pull/1162>`__)",
+      "description": "Add support for stage independent lambda configuration (#1162)",
       "type": "feature"
     },
     {
       "category": "event-source",
-      "description": "Add support for subscribing to CloudWatch Events\n(`#1126 <https://github.com/aws/chalice/pull/1126>`__)",
+      "description": "Add support for subscribing to CloudWatch Events (#1126)",
       "type": "feature"
     },
     {
       "category": "event-source",
-      "description": "Add a ``description`` argument to CloudWatch schedule events\n(`#1155 <https://github.com/aws/chalice/pull/1155>`__)",
+      "description": "Add a ``description`` argument to CloudWatch schedule events (#1155)",
       "type": "feature"
     },
     {
       "category": "rest-api",
-      "description": "Fix deployment of API Gateway resource policies\n(`#1220 <https://github.com/aws/chalice/pull/1220>`__)",
+      "description": "Fix deployment of API Gateway resource policies (#1220)",
       "type": "bugfix"
     }
   ]

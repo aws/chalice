@@ -143,7 +143,7 @@ class TestChaliceDeploymentError(object):
 
     def test_gives_where_and_suggestion_for_too_large_deployment_error(self):
         too_large_error = DeploymentPackageTooLargeError(
-            Exception('Too large of deployment pacakge'),
+            Exception('Too large of deployment package'),
             context=LambdaErrorContext(
                 function_name='foo',
                 client_method_name='create_function',
@@ -156,7 +156,7 @@ class TestChaliceDeploymentError(object):
             'ERROR - While sending your chalice handler code to '
             'Lambda to create function \n"foo"' in deploy_error_msg
         )
-        assert 'Too large of deployment pacakge' in deploy_error_msg
+        assert 'Too large of deployment package' in deploy_error_msg
         assert (
             'To avoid this error, decrease the size of your chalice '
             'application ' in deploy_error_msg
@@ -164,7 +164,7 @@ class TestChaliceDeploymentError(object):
 
     def test_include_size_context_for_too_large_deployment_error(self):
         too_large_error = DeploymentPackageTooLargeError(
-            Exception('Too large of deployment pacakge'),
+            Exception('Too large of deployment package'),
             context=LambdaErrorContext(
                 function_name='foo',
                 client_method_name='create_function',
@@ -331,7 +331,7 @@ class TestDependencyBuilder(object):
         deps = dep_builder.build_dependencies(app)
         assert deps == [first_leaf, first_parent, second_leaf, second_parent]
 
-    def test_no_duplicate_depedencies(self):
+    def test_no_duplicate_dependencies(self):
         leaf = LeafResource(name='leaf')
         second_parent = FooResource(name='second', leaf=leaf)
         first_parent = FooResource(name='first', leaf=[leaf, second_parent])

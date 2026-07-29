@@ -3,27 +3,27 @@
   "changes": [
     {
       "category": "packaging",
-      "description": "Fix packaging multiple local directories as dependencies\n(`#1047 <https://github.com/aws/chalice/pull/1047>`__)",
+      "description": "Fix packaging multiple local directories as dependencies (#1047)",
       "type": "bugfix"
     },
     {
       "category": "event-source",
-      "description": "Add support for passing SNS ARNs to ``on_sns_message``\n(`#1048 <https://github.com/aws/chalice/pull/1048>`__)",
+      "description": "Add support for passing SNS ARNs to ``on_sns_message`` (#1048)",
       "type": "feature"
     },
     {
       "category": "blueprint",
-      "description": "Add support for Blueprints\n(`#1023 <https://github.com/aws/chalice/pull/1023>`__)",
+      "description": "Add support for Blueprints (#1023)",
       "type": "feature"
     },
     {
       "category": "config",
-      "description": "Add support for opting-in to experimental features\n(`#1053 <https://github.com/aws/chalice/pull/1053>`__)",
+      "description": "Add support for opting-in to experimental features (#1053)",
       "type": "feature"
     },
     {
       "category": "event-source",
-      "description": "Provide Lambda context in event object\n(`#856 <https://github.com/aws/chalice/issues/856>`__)",
+      "description": "Provide Lambda context in event object (#856)",
       "type": "feature"
     }
   ]

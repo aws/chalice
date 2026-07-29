@@ -17,85 +17,76 @@ from chalice.deploy.packager import NoSuchPackageError
 
 
 PY_VERSION = sys.version_info[:2]
-VERSION_CUTOFF = (3, 9)
-# We're being cautious here, but we want to fix the package versions we
-# try to install on older versions of python.
-# If the python version being tested is less than the VERSION_CUTOFF of 3.9,
-# then we'll install the `legacy_version` in the packages below.  This is to
-# ensure we don't regress on being able to package older package versions on
-# older versions on python. Any python version above the VERSION_CUTOFF will
-# install the `version` identifier.  That way newer versions of python won't
-# need to update this list as long as a package can still be installed on
-# 3.10 or higher.
+PY314_OR_LATER = PY_VERSION >= (3, 14)
+# Keep these smoke-test pins compatible with every Python version in the
+# current CI matrix. Some projects dropped Python 3.10 support before adding
+# cp314 wheels, so those packages need Python-version-specific pins.
+NUMPY_VERSION = '2.3.4' if PY314_OR_LATER else '2.2.6'
+PANDAS_VERSION = '2.3.3'
+SQLALCHEMY_VERSION = '2.0.49'
+SCIPY_VERSION = '1.17.1' if PY314_OR_LATER else '1.15.3'
+CFFI_VERSION = '2.0.0'
+PYGIT2_VERSION = '1.19.2' if PY314_OR_LATER else '1.17.0'
 PACKAGES_TO_TEST = {
     'pandas': {
-        'version': '1.5.3',
-        'legacy_version': '1.1.5',
+        'version': PANDAS_VERSION,
+        'dependencies': ['numpy==%s' % NUMPY_VERSION],
         'contents': [
-            'pandas/_libs/__init__.py',
-            'pandas/io/sas/_sas.cpython-*-x86_64-linux-gnu.so'
+            'pandas/*__init__.py',
+            'pandas/*cpython-*-x86_64-linux-gnu.so'
         ],
     },
     'SQLAlchemy': {
-        'version': '1.4.47',
-        'legacy_version': '1.3.20',
+        'version': SQLALCHEMY_VERSION,
         'contents': [
             'sqlalchemy/__init__.py',
-            'sqlalchemy/cresultproxy.cpython-*-x86_64-linux-gnu.so'
+            'sqlalchemy/*cpython-*-x86_64-linux-gnu.so'
         ],
     },
     'numpy': {
-        'version': '1.23.3',
-        'legacy_version': '1.19.4',
+        'version': NUMPY_VERSION,
         'contents': [
             'numpy/__init__.py',
-            'numpy/core/_struct_ufunc_tests.cpython-*-x86_64-linux-gnu.so'
+            'numpy/*cpython-*-x86_64-linux-gnu.so'
         ],
     },
     'cryptography': {
-        'version': '3.3.1',
-        'legacy_version': '3.3.1',
+        'version': '44.0.3',
         'contents': [
             'cryptography/__init__.py',
-            'cryptography/hazmat/bindings/_openssl.abi3.so'
+            'cryptography/*.so'
         ],
     },
     'Jinja2': {
-        'version': '2.11.2',
-        'legacy_version': '2.11.2',
+        'version': '3.1.6',
         'contents': ['jinja2/__init__.py'],
     },
     'Mako': {
-        'version': '1.1.3',
-        'legacy_version': '1.1.3',
+        'version': '1.3.10',
         'contents': ['mako/__init__.py'],
     },
     'MarkupSafe': {
-        'version': '1.1.1',
-        'legacy_version': '1.1.1',
+        'version': '3.0.2',
         'contents': ['markupsafe/__init__.py'],
     },
     'scipy': {
-        'version': '1.10.1',
-        'legacy_version': '1.5.4',
+        'version': SCIPY_VERSION,
+        'dependencies': ['numpy==%s' % NUMPY_VERSION],
         'contents': [
             'scipy/__init__.py',
             'scipy/cluster/_hierarchy.cpython-*-x86_64-linux-gnu.so'
         ],
     },
     'cffi': {
-        'version': '1.15.1',
-        'legacy_version': '1.14.5',
+        'version': CFFI_VERSION,
         'contents': ['_cffi_backend.cpython-*-x86_64-linux-gnu.so'],
     },
     'pygit2': {
-        'version': '1.10.1',
-        'legacy_version': '1.5.0',
+        'version': PYGIT2_VERSION,
         'contents': ['pygit2/_pygit2.cpython-*-x86_64-linux-gnu.so'],
     },
     'pyrsistent': {
-        'version': '0.17.3',
-        'legacy_version': '0.17.3',
+        'version': '0.20.0',
         'contents': ['pyrsistent/__init__.py'],
     },
 }
@@ -130,14 +121,11 @@ def _get_random_package_name():
 
 def _get_package_install_test_cases():
     testcases = []
-    if PY_VERSION <= VERSION_CUTOFF:
-        version_key = 'legacy_version'
-    else:
-        version_key = 'version'
     for package, config in PACKAGES_TO_TEST.items():
-        package_version = f'{package}=={config[version_key]}'
+        package_version = f'{package}=={config["version"]}'
+        requirements = [package_version] + config.get('dependencies', [])
         testcases.append(
-            (package_version, config['contents'])
+            pytest.param(requirements, config['contents'], id=package_version)
         )
     return testcases
 
@@ -147,16 +135,20 @@ def _get_package_install_test_cases():
 @pytest.mark.skipif(not os.environ.get('CHALICE_TEST_EXTENDED_PACKAGING'),
                     reason='Set CHALICE_TEST_EXTENDED_PACKAGING for extended '
                            'packaging tests.')
-@pytest.mark.parametrize('package,contents', _get_package_install_test_cases())
-def test_package_install_smoke_tests(package, contents, runner, app_skeleton):
-    assert_can_package_dependency(runner, app_skeleton, package, contents)
+@pytest.mark.parametrize('requirements,contents',
+                         _get_package_install_test_cases())
+def test_package_install_smoke_tests(requirements, contents, runner,
+                                     app_skeleton):
+    assert_can_package_dependency(runner, app_skeleton, requirements, contents)
 
 
 def assert_can_package_dependency(
-        runner, app_skeleton, package, contents):
+        runner, app_skeleton, requirements, contents):
+    if isinstance(requirements, str):
+        requirements = [requirements]
     req = os.path.join(app_skeleton, 'requirements.txt')
     with open(req, 'w') as f:
-        f.write('%s\n' % package)
+        f.write('\n'.join(requirements) + '\n')
     cli_factory = factory.CLIFactory(app_skeleton)
     package_output_location = os.path.join(app_skeleton, 'pkg')
     result = runner.invoke(
@@ -164,6 +156,10 @@ def assert_can_package_dependency(
         obj={'project_dir': app_skeleton,
              'debug': False,
              'factory': cli_factory})
+    if result.exit_code != 0:
+        raise AssertionError(
+            "Non-zero RC when packaging %s" % (
+                ', '.join(requirements))) from result.exception
     assert result.exit_code == 0
     assert result.output.strip() == 'Creating deployment package.'
     package_path = os.path.join(app_skeleton, 'pkg', 'deployment.zip')
@@ -181,9 +177,9 @@ class TestPackage(object):
         assert_can_package_dependency(
             runner,
             app_skeleton,
-            'googleapis-common-protos==1.5.2',
+            'googleapis-common-protos==1.74.0',
             contents=[
-                'google/api/__init__.py',
+                'google/api/annotations_pb2.py',
             ],
         )
 
@@ -192,7 +188,7 @@ class TestPackage(object):
         assert_can_package_dependency(
             runner,
             app_skeleton,
-            'simplejson==3.17.0',
+            'simplejson==4.1.1',
             contents=[
                 'simplejson/__init__.py',
             ],
@@ -205,20 +201,17 @@ class TestPackage(object):
         assert_can_package_dependency(
             runner,
             app_skeleton,
-            'SQLAlchemy==1.3.13',
+            'SQLAlchemy==2.0.49',
             contents=[
                 'sqlalchemy/__init__.py',
             ],
         )
 
-    @pytest.mark.skipif(sys.version_info[0] == 2,
-                        reason='pandas==1.1.5 is only suported on py3.')
     def test_can_package_pandas(self, runner, app_skeleton, no_local_config):
-        version = '1.5.3' if sys.version_info[1] >= 10 else '1.1.5'
         assert_can_package_dependency(
             runner,
             app_skeleton,
-            'pandas==' + version,
+            ['pandas==' + PANDAS_VERSION, 'numpy==%s' % NUMPY_VERSION],
             contents=[
                 'pandas/_libs/__init__.py',
             ],

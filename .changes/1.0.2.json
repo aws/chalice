@@ -3,37 +3,37 @@
   "changes": [
     {
       "category": "rest-api",
-      "description": "Fix issue where requestParameters were not being mapped\ncorrectly resulting in invalid generated javascript SDKs\n(`#498 <https://github.com/aws/chalice/issues/498>`__)",
+      "description": "Fix issue where requestParameters were not being mapped\ncorrectly resulting in invalid generated javascript SDKs (#498)",
       "type": "bugfix"
     },
     {
       "category": "rest-api",
-      "description": "Fix issue where ``api_gateway_stage`` was being\nignored when set in the ``config.json`` file\n(`#495 <https://github.com/aws/chalice/issues/495>`__)",
+      "description": "Fix issue where ``api_gateway_stage`` was being\nignored when set in the ``config.json`` file (#495)",
       "type": "bugfix"
     },
     {
       "category": "rest-api",
-      "description": "Fix bug where ``raw_body`` would raise an exception if no HTTP\nbody was provided\n(`#503 <https://github.com/aws/chalice/issues/503>`__)",
+      "description": "Fix bug where ``raw_body`` would raise an exception if no HTTP\nbody was provided (#503)",
       "type": "bugfix"
     },
     {
       "category": "CLI",
-      "description": "Fix bug where exit codes were not properly being propagated during packaging\n(`#500 <https://github.com/aws/chalice/issues/500>`__)",
+      "description": "Fix bug where exit codes were not properly being propagated during packaging (#500)",
       "type": "bugfix"
     },
     {
       "category": "local",
-      "description": "Add support for Builtin Authorizers in local mode\n(`#404 <https://github.com/aws/chalice/issues/404>`__)",
+      "description": "Add support for Builtin Authorizers in local mode (#404)",
       "type": "feature"
     },
     {
       "category": "packaging",
-      "description": "Fix environment variables being passed to subprocess while packaging\n(`#501 <https://github.com/aws/chalice/issues/501>`__)",
+      "description": "Fix environment variables being passed to subprocess while packaging (#501)",
       "type": "bugfix"
     },
     {
       "category": "rest-api",
-      "description": "Allow view to require API keys as well as authorization\n(`#473 <https://github.com/aws/chalice/pull/473/>`__)",
+      "description": "Allow view to require API keys as well as authorization (#473)",
       "type": "enhancement"
     }
   ]

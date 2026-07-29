@@ -3,22 +3,22 @@
   "changes": [
     {
       "category": "rest-api",
-      "description": "Add support for ``IAM`` authorizer\n(`#334 <https://github.com/awslabs/chalice/pull/334>`__)",
+      "description": "Add support for ``IAM`` authorizer (#334)",
       "type": "feature"
     },
     {
       "category": "config",
-      "description": "Add support for configuring ``lambda_timeout``, ``lambda_memory_size``,\nand ``tags`` in your AWS Lambda function\n(`#347 <https://github.com/awslabs/chalice/issues/347>`__)",
+      "description": "Add support for configuring ``lambda_timeout``, ``lambda_memory_size``,\nand ``tags`` in your AWS Lambda function (#347)",
       "type": "feature"
     },
     {
       "category": "packaging",
-      "description": "Fix vendor directory contents not being importable locally\n(`#350 <https://github.com/awslabs/chalice/pull/350>`__)",
+      "description": "Fix vendor directory contents not being importable locally (#350)",
       "type": "bugfix"
     },
     {
       "category": "rest-api",
-      "description": "Add support for binary payloads\n(`#348 <https://github.com/awslabs/chalice/issues/348>`__)",
+      "description": "Add support for binary payloads (#348)",
       "type": "feature"
     }
   ]

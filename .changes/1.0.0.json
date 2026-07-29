@@ -3,32 +3,32 @@
   "changes": [
     {
       "category": "rest-api",
-      "description": "Change default API Gateway stage name to ``api``\n(`#431 <https://github.com/awslabs/chalice/pull/431>`__)",
+      "description": "Change default API Gateway stage name to ``api`` (#431)",
       "type": "enhancement"
     },
     {
       "category": "local",
-      "description": "Add support for ``CORSConfig`` in ``chalice local``\n(`#436 <https://github.com/awslabs/chalice/issues/436>`__)",
+      "description": "Add support for ``CORSConfig`` in ``chalice local`` (#436)",
       "type": "enhancement"
     },
     {
       "category": "logging",
-      "description": "Propagate ``DEBUG`` log level when setting ``app.debug``\n(`#386 <https://github.com/awslabs/chalice/issues/386>`__)",
+      "description": "Propagate ``DEBUG`` log level when setting ``app.debug`` (#386)",
       "type": "enhancement"
     },
     {
       "category": "rest-api",
-      "description": "Add support for wildcard routes and HTTP methods in ``AuthResponse``\n(`#403 <https://github.com/awslabs/chalice/issues/403>`__)",
+      "description": "Add support for wildcard routes and HTTP methods in ``AuthResponse`` (#403)",
       "type": "feature"
     },
     {
       "category": "policy",
-      "description": "Fix bug when analyzing list comprehensions\n(`#412 <https://github.com/awslabs/chalice/issues/412>`__)",
+      "description": "Fix bug when analyzing list comprehensions (#412)",
       "type": "bugfix"
     },
     {
       "category": "local",
-      "description": "Update ``chalice local`` to use HTTP 1.1\n(`#448 <https://github.com/awslabs/chalice/pull/448>`__)",
+      "description": "Update ``chalice local`` to use HTTP 1.1 (#448)",
       "type": "enhancement"
     }
   ]

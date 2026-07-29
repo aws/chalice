@@ -3,27 +3,27 @@
   "changes": [
     {
       "category": "deployment",
-      "description": "Alway overwrite existing API Gateway Rest API on updates\n(`#305 <https://github.com/awslabs/chalice/issues/305>`__)",
+      "description": "Alway overwrite existing API Gateway Rest API on updates (#305)",
       "type": "enhancement"
     },
     {
       "category": "CORS",
-      "description": "Added more granular support for CORS\n(`#311 <https://github.com/awslabs/chalice/pull/311>`__)",
+      "description": "Added more granular support for CORS (#311)",
       "type": "enhancement"
     },
     {
       "category": "local",
-      "description": "Fix duplicate content type header in local model\n(`#311 <https://github.com/awslabs/chalice/issues/310>`__)",
+      "description": "Fix duplicate content type header in local model (#311)",
       "type": "bugfix"
     },
     {
       "category": "rest-api",
-      "description": "Fix content type validation when charset is provided\n(`#306 <https://github.com/awslabs/chalice/issues/306>`__)",
+      "description": "Fix content type validation when charset is provided (#306)",
       "type": "bugfix"
     },
     {
       "category": "rest-api",
-      "description": "Add back custom authorizer support\n(`#322 <https://github.com/awslabs/chalice/pull/322>`__)",
+      "description": "Add back custom authorizer support (#322)",
       "type": "enhancement"
     }
   ]

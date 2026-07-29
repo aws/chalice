@@ -286,7 +286,7 @@ class CLIFactory(object):
         validate_feature_flags: Optional[bool] = True,
     ) -> Chalice:
         # validate_features indicates that we should validate that
-        # any expiremental features used have the appropriate feature flags.
+        # any experimental features used have the appropriate feature flags.
         if self.project_dir not in sys.path:
             sys.path.insert(0, self.project_dir)
         # The vendor directory has its contents copied up to the top level of

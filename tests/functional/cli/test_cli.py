@@ -409,16 +409,10 @@ def test_error_when_no_deployed_record(runner, mock_cli_factory):
         assert 'not find' in result.output
 
 
-@pytest.mark.skipif(sys.version_info[:2] == (3, 7),
-                    reason="Cannot generate pipeline for python3.7.")
-@pytest.mark.skipif(sys.version_info[:2] == (3, 8),
-                    reason="Cannot generate pipeline for python3.8.")
-@pytest.mark.skipif(sys.version_info[:2] == (3, 9),
-                    reason="Cannot generate pipeline for python3.9.")
-@pytest.mark.skipif(sys.version_info[:2] == (3, 10),
-                    reason="Cannot generate pipeline for python3.10.")
-@pytest.mark.skipif(sys.version_info[:2] == (3, 11),
-                    reason="Cannot generate pipeline for python3.11.")
+@pytest.mark.skipif(
+    (3, 10) <= sys.version_info[:2] <= (3, 14),
+    reason=("Cannot generate pipeline for python3.10 - python3.14"),
+)
 def test_can_generate_pipeline_for_all(runner):
     with runner.isolated_filesystem():
         newproj.create_new_project_skeleton('testproject')

@@ -5,6 +5,8 @@ from chalice.utils import OSUtils
 from chalice.compat import pip_no_compile_c_env_vars
 from chalice.compat import pip_no_compile_c_shim
 from chalice.deploy.packager import Package
+from chalice.deploy.packager import BaseLambdaDeploymentPackager
+from chalice.deploy.packager import DependencyBuilder
 from chalice.deploy.packager import PipRunner
 from chalice.deploy.packager import SubprocessPip
 from chalice.deploy.packager import InvalidSourceDistributionNameError
@@ -55,6 +57,63 @@ class CustomEnv(OSUtils):
 @pytest.fixture
 def osutils():
     return OSUtils()
+
+
+def test_python314_runtime_maps_to_cp314():
+    runtime_to_abi = BaseLambdaDeploymentPackager._RUNTIME_TO_ABI
+    assert runtime_to_abi['python3.14'] == 'cp314'
+
+
+def test_cp314_wheels_use_al2023_glibc(osutils):
+    builder = DependencyBuilder(osutils)
+    assert builder._is_compatible_wheel_filename(
+        'cp314', 'foo-1.0-cp314-cp314-manylinux_2_34_x86_64.whl'
+    )
+    assert builder._is_compatible_wheel_filename(
+        'cp314', 'foo-1.0-cp39-abi3-manylinux_2_34_x86_64.whl'
+    )
+    assert not builder._is_compatible_wheel_filename(
+        'cp314', 'foo-1.0-cp314-cp314-manylinux_2_35_x86_64.whl'
+    )
+
+
+def test_pip_platforms_enumerate_glibc_range(osutils):
+    builder = DependencyBuilder(osutils)
+    assert builder._get_pip_platforms('cp314') == [
+        'manylinux_2_17_x86_64',
+        'manylinux_2_18_x86_64',
+        'manylinux_2_19_x86_64',
+        'manylinux_2_20_x86_64',
+        'manylinux_2_21_x86_64',
+        'manylinux_2_22_x86_64',
+        'manylinux_2_23_x86_64',
+        'manylinux_2_24_x86_64',
+        'manylinux_2_25_x86_64',
+        'manylinux_2_26_x86_64',
+        'manylinux_2_27_x86_64',
+        'manylinux_2_28_x86_64',
+        'manylinux_2_29_x86_64',
+        'manylinux_2_30_x86_64',
+        'manylinux_2_31_x86_64',
+        'manylinux_2_32_x86_64',
+        'manylinux_2_33_x86_64',
+        'manylinux_2_34_x86_64',
+        'manylinux2014_x86_64',
+    ]
+    # Older runtimes on AL2 stop enumeration at glibc 2.26.
+    assert builder._get_pip_platforms('cp310') == [
+        'manylinux_2_17_x86_64',
+        'manylinux_2_18_x86_64',
+        'manylinux_2_19_x86_64',
+        'manylinux_2_20_x86_64',
+        'manylinux_2_21_x86_64',
+        'manylinux_2_22_x86_64',
+        'manylinux_2_23_x86_64',
+        'manylinux_2_24_x86_64',
+        'manylinux_2_25_x86_64',
+        'manylinux_2_26_x86_64',
+        'manylinux2014_x86_64',
+    ]
 
 
 class FakePopen(object):
@@ -225,6 +284,23 @@ class TestPipRunner(object):
             assert pip.calls[i].args == expected_prefix + [package]
             assert pip.calls[i].env_vars is None
             assert pip.calls[i].shim is None
+
+    def test_download_wheels_uses_given_platforms(self, pip_factory):
+        pip, runner = pip_factory()
+        runner.download_manylinux_wheels(
+            'cp314',
+            ['foo'],
+            'directory',
+            ['manylinux2014_x86_64', 'manylinux_2_28_x86_64'],
+        )
+
+        assert pip.calls[0].args == [
+            'download', '--only-binary=:all:', '--no-deps',
+            '--platform', 'manylinux2014_x86_64',
+            '--platform', 'manylinux_2_28_x86_64',
+            '--implementation', 'cp', '--abi', 'cp314',
+            '--dest', 'directory', 'foo',
+        ]
 
     def test_download_wheels_no_wheels(self, pip_factory):
         pip, runner = pip_factory()

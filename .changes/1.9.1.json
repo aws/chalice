@@ -3,7 +3,7 @@
   "changes": [
     {
       "category": "rest-api",
-      "description": "Make MultiDict mutable\n(`#1158 <https://github.com/aws/chalice/issues/1158>`__)",
+      "description": "Make MultiDict mutable (#1158)",
       "type": "enhancement"
     }
   ]
