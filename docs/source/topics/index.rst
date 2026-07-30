@@ -25,3 +25,4 @@ Topics
    experimental
    testing
    middleware
+   errorhandler
