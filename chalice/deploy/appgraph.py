@@ -575,6 +575,7 @@ class ApplicationGraphBuilder(object):
             layers=lambda_layers,
             managed_layer=self._get_managed_lambda_layer(config),
             xray=config.xray_enabled,
+            lambda_alias=config.lambda_alias,
         )
         self._inject_role_traits(function, role)
         return function

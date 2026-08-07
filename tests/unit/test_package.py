@@ -449,6 +449,18 @@ class TestTerraformTemplate(TemplateTestBase):
         tf_resource = self.get_function(template)
         assert tf_resource['reserved_concurrent_executions'] == 5
 
+    def test_adds_alias_when_provided(self, sample_app):
+        function = self.lambda_function()
+        function.lambda_alias = 'live'
+        template = self.template_gen.generate([function])
+        tf_resource = self.get_function(template)
+        assert tf_resource['publish'] is True
+        assert template['resource']['aws_lambda_alias']['foo'] == {
+            'name': 'live',
+            'function_name': '${aws_lambda_function.foo.function_name}',
+            'function_version': '${aws_lambda_function.foo.version}',
+        }
+
     def test_adds_log_group_resource_when_configured(self, sample_app):
         function = self.lambda_function()
         name = function.resource_name + '-log-group'
@@ -1243,6 +1255,14 @@ class TestSAMTemplate(TemplateTestBase):
         template = self.template_gen.generate([function])
         cfn_resource = list(template['Resources'].values())[0]
         assert cfn_resource['Properties']['ReservedConcurrentExecutions'] == 5
+
+    def test_adds_alias_when_provided(self, sample_app):
+        function = self.lambda_function()
+        function.lambda_alias = 'live'
+        template = self.template_gen.generate([function])
+        cfn_resource = list(template['Resources'].values())[0]
+        assert cfn_resource['Properties']['AutoPublishAlias'] == 'live'
+        assert cfn_resource['Properties']['AutoPublishAliasAllProperties']
 
     def test_adds_log_group_resource_when_configured(self, sample_app):
         function = self.lambda_function()

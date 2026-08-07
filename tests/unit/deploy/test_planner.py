@@ -20,7 +20,8 @@ def create_function_resource(name, function_name=None,
                              runtime='python2.7', handler='app.app',
                              tags=None, timeout=60,
                              memory_size=128, deployment_package=None,
-                             role=None, layers=None, managed_layer=None):
+                             role=None, layers=None, managed_layer=None,
+                             lambda_alias=None):
     if function_name is None:
         function_name = 'appname-dev-%s' % name
     if environment_variables is None:
@@ -48,6 +49,7 @@ def create_function_resource(name, function_name=None,
         layers=layers,
         reserved_concurrency=None,
         managed_layer=managed_layer,
+        lambda_alias=lambda_alias,
     )
 
 
@@ -736,6 +738,48 @@ class TestPlanLambdaFunction(BasePlannerTests):
         ))
         assert plan[3].method_name == 'update_function'
         assert plan[3].params['layers'] == [Variable('layer_version_arn')]
+
+    def test_can_publish_version_and_update_alias(self):
+        function = create_function_resource(
+            'function_name',
+            lambda_alias='live',
+        )
+        self.remote_state.declare_no_resources_exists()
+        plan = self.determine_plan(function)
+        assert plan[3] == models.APICall(
+            method_name='publish_function_version',
+            params={
+                'function_name': 'appname-dev-function_name',
+            },
+            output_var='function_name_lambda_version_result',
+        )
+        assert plan[4] == models.JPSearch(
+            'Version',
+            input_var='function_name_lambda_version_result',
+            output_var='function_name_lambda_version',
+        )
+        assert plan[5] == models.APICall(
+            method_name='create_or_update_function_alias',
+            params={
+                'function_name': 'appname-dev-function_name',
+                'alias_name': 'live',
+                'function_version': Variable('function_name_lambda_version'),
+            },
+            output_var='function_name_lambda_alias_result',
+        )
+        assert plan[6] == models.JPSearch(
+            'AliasArn',
+            input_var='function_name_lambda_alias_result',
+            output_var='function_name_lambda_arn',
+        )
+        self.assert_recorded_values(
+            plan, 'lambda_function', 'function_name', {
+                'lambda_arn': Variable('function_name_lambda_arn'),
+                'lambda_alias': 'live',
+                'lambda_alias_arn': Variable('function_name_lambda_arn'),
+                'lambda_version': Variable('function_name_lambda_version'),
+            }
+        )
 
     def test_can_create_function_with_reserved_concurrency(self):
         function = create_function_resource('function_name')
@@ -1454,6 +1498,29 @@ class TestPlanRestAPI(BasePlannerTests):
             'Creating Rest API\n'
         ]
 
+    def test_rest_api_permission_uses_alias_arn(self):
+        function = create_function_resource(
+            'function_name', lambda_alias='live')
+        rest_api = models.RestAPI(
+            resource_name='rest_api',
+            swagger_doc={'swagger': '2.0'},
+            endpoint_type='EDGE',
+            minimum_compression='100',
+            api_gateway_stage='api',
+            xray=False,
+            lambda_function=function,
+        )
+        plan = self.determine_plan(rest_api)
+        assert plan[9] == models.APICall(
+            method_name='add_permission_for_apigateway',
+            params={
+                'function_name': Variable('function_name_lambda_arn'),
+                'region_name': Variable('region_name'),
+                'account_id': Variable('account_id'),
+                'rest_api_id': Variable('rest_api_id'),
+            }
+        )
+
     def test_can_update_rest_api_with_policy(self):
         function = create_function_resource('function_name')
         rest_api = models.RestAPI(
@@ -1877,6 +1944,83 @@ class TestPlanSQSSubscription(BasePlannerTests):
             }
         )
 
+    def test_can_update_sqs_event_to_lambda_alias(self):
+        function = create_function_resource(
+            'function_name', lambda_alias='live')
+        sqs_event_source = models.SQSEventSource(
+            resource_name='function_name-sqs-event-source',
+            queue=models.QueueARN(arn='arn:sqs:myqueue'),
+            batch_size=10,
+            lambda_function=function,
+            maximum_batching_window_in_seconds=0
+        )
+        self.remote_state.declare_resource_exists(
+            sqs_event_source,
+            queue='myqueue',
+            queue_arn='arn:sqs:myqueue',
+            resource_type='sqs_event',
+            lambda_arn='arn:aws:lambda:us-west-2:123:function:old',
+            event_uuid='my-uuid',
+        )
+        plan = self.determine_plan(sqs_event_source)
+        assert plan[1] == models.APICall(
+            method_name='update_lambda_event_source',
+            params={
+                'event_uuid': 'my-uuid',
+                'batch_size': 10,
+                'maximum_batching_window_in_seconds': 0,
+                'maximum_concurrency': None,
+                'function_name': Variable('function_name_lambda_arn'),
+            },
+        )
+        self.assert_recorded_values(
+            plan, 'sqs_event', 'function_name-sqs-event-source', {
+                'queue_arn': 'arn:sqs:myqueue',
+                'event_uuid': 'my-uuid',
+                'queue': 'myqueue',
+                'lambda_arn': Variable('function_name_lambda_arn')
+            }
+        )
+
+    def test_can_update_sqs_event_from_lambda_alias(self):
+        function = create_function_resource('function_name')
+        sqs_event_source = models.SQSEventSource(
+            resource_name='function_name-sqs-event-source',
+            queue=models.QueueARN(arn='arn:sqs:myqueue'),
+            batch_size=10,
+            lambda_function=function,
+            maximum_batching_window_in_seconds=0
+        )
+        self.remote_state.declare_resource_exists(
+            sqs_event_source,
+            queue='myqueue',
+            queue_arn='arn:sqs:myqueue',
+            resource_type='sqs_event',
+            lambda_arn=(
+                'arn:aws:lambda:us-west-2:123:function:old:live'
+            ),
+            event_uuid='my-uuid',
+        )
+        plan = self.determine_plan(sqs_event_source)
+        assert plan[1] == models.APICall(
+            method_name='update_lambda_event_source',
+            params={
+                'event_uuid': 'my-uuid',
+                'batch_size': 10,
+                'maximum_batching_window_in_seconds': 0,
+                'maximum_concurrency': None,
+                'function_name': Variable('function_name_lambda_arn'),
+            },
+        )
+        self.assert_recorded_values(
+            plan, 'sqs_event', 'function_name-sqs-event-source', {
+                'queue_arn': 'arn:sqs:myqueue',
+                'event_uuid': 'my-uuid',
+                'queue': 'myqueue',
+                'lambda_arn': Variable('function_name_lambda_arn')
+            }
+        )
+
     def test_sqs_event_source_exists_updates_batch_size(self):
         function = create_function_resource('function_name')
         sqs_event_source = models.SQSEventSource(
@@ -2145,6 +2289,45 @@ class TestPlanKinesisSubscription(BasePlannerTests):
             }
         )
 
+    def test_can_update_kinesis_event_from_lambda_alias(self):
+        function = create_function_resource('function_name')
+        kinesis_event_source = models.KinesisEventSource(
+            resource_name='function_name-kinesis-event-source',
+            stream='mystream',
+            batch_size=10,
+            starting_position='LATEST',
+            maximum_batching_window_in_seconds=60,
+            lambda_function=function
+        )
+        self.remote_state.declare_resource_exists(
+            kinesis_event_source,
+            stream='mystream',
+            kinesis_arn='arn:aws:kinesis:stream',
+            resource_type='kinesis_event',
+            lambda_arn=(
+                'arn:aws:lambda:us-west-2:123:function:old:live'
+            ),
+            event_uuid='my-uuid',
+        )
+        plan = self.determine_plan(kinesis_event_source)
+        assert plan[5] == models.APICall(
+            method_name='update_lambda_event_source',
+            params={
+                'event_uuid': 'my-uuid',
+                'batch_size': 10,
+                'maximum_batching_window_in_seconds': 60,
+                'function_name': Variable('function_name_lambda_arn'),
+            }
+        )
+        self.assert_recorded_values(
+            plan, 'kinesis_event', 'function_name-kinesis-event-source', {
+                'kinesis_arn': 'arn:aws:kinesis:stream',
+                'event_uuid': 'my-uuid',
+                'stream': 'mystream',
+                'lambda_arn': Variable('function_name_lambda_arn')
+            }
+        )
+
 
 class TestPlanDynamoDBSubscription(BasePlannerTests):
     def test_can_plan_dynamodb_event_source(self):
@@ -2189,6 +2372,40 @@ class TestPlanDynamoDBSubscription(BasePlannerTests):
                 'batch_size': 100,
                 'maximum_batching_window_in_seconds': 60
             },
+        )
+
+    def test_can_plan_dynamodb_event_source_from_lambda_alias(self):
+        function = create_function_resource('function_name')
+        event_source = models.DynamoDBEventSource(
+            resource_name='handler-dynamodb-event-source',
+            stream_arn='arn:stream', batch_size=100,
+            maximum_batching_window_in_seconds=60,
+            starting_position='LATEST', lambda_function=function)
+        self.remote_state.declare_resource_exists(
+            event_source,
+            stream_arn='arn:stream',
+            resource_type='dynamodb_event',
+            lambda_arn=(
+                'arn:aws:lambda:us-west-2:123:function:old:live'
+            ),
+            event_uuid='my-uuid',
+        )
+        plan = self.determine_plan(event_source)
+        assert plan[0] == models.APICall(
+            method_name='update_lambda_event_source',
+            params={
+                'event_uuid': 'my-uuid',
+                'batch_size': 100,
+                'maximum_batching_window_in_seconds': 60,
+                'function_name': Variable('function_name_lambda_arn'),
+            },
+        )
+        self.assert_recorded_values(
+            plan, 'dynamodb_event', 'handler-dynamodb-event-source', {
+                'stream_arn': 'arn:stream',
+                'event_uuid': 'my-uuid',
+                'lambda_arn': Variable('function_name_lambda_arn')
+            }
         )
 
 

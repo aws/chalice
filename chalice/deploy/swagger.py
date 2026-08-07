@@ -254,26 +254,46 @@ class SwaggerGenerator(object):
 class CFNSwaggerGenerator(SwaggerGenerator):
     def __init__(self):
         # type: () -> None
-        pass
+        self._lambda_alias = None  # type: Optional[str]
+        self._authorizer_aliases = {}  # type: Dict[str, Optional[str]]
+
+    def generate_swagger(self, app, rest_api=None):
+        # type: (Chalice, Optional[RestAPI]) -> Dict[str, Any]
+        if rest_api is not None and rest_api.lambda_function is not None:
+            self._lambda_alias = rest_api.lambda_function.lambda_alias
+            self._authorizer_aliases = {
+                auth.resource_name: auth.lambda_alias
+                for auth in rest_api.authorizers
+            }
+        return super(CFNSwaggerGenerator, self).generate_swagger(
+            app, rest_api
+        )
 
     def _uri(self, lambda_arn=None):
         # type: (Optional[str]) -> Any
+        alias = ''
+        if self._lambda_alias is not None:
+            alias = ':%s' % self._lambda_alias
         return {
             'Fn::Sub': (
                 'arn:${AWS::Partition}:apigateway:${AWS::Region}'
                 ':lambda:path/2015-03-31'
-                '/functions/${APIHandler.Arn}/invocations'
+                '/functions/${APIHandler.Arn}%s/invocations' % alias
             )
         }
 
     def _auth_uri(self, authorizer):
         # type: (ChaliceAuthorizer) -> Any
+        resource_name = to_cfn_resource_name(authorizer.name)
+        alias = ''
+        if self._authorizer_aliases.get(authorizer.name) is not None:
+            alias = ':%s' % self._authorizer_aliases[authorizer.name]
         return {
             'Fn::Sub': (
                 'arn:${AWS::Partition}:apigateway:${AWS::Region}'
                 ':lambda:path/2015-03-31'
-                '/functions/${%s.Arn}/invocations' % to_cfn_resource_name(
-                    authorizer.name)
+                '/functions/${%s.Arn}%s/invocations' %
+                (resource_name, alias)
             )
         }
 
@@ -305,12 +325,29 @@ class TerraformSwaggerGenerator(SwaggerGenerator):
 
     def __init__(self):
         # type: () -> None
-        pass
+        self._lambda_alias = None  # type: Optional[str]
+        self._authorizer_aliases = {}  # type: Dict[str, Optional[str]]
+
+    def generate_swagger(self, app, rest_api=None):
+        # type: (Chalice, Optional[RestAPI]) -> Dict[str, Any]
+        if rest_api is not None and rest_api.lambda_function is not None:
+            self._lambda_alias = rest_api.lambda_function.lambda_alias
+            self._authorizer_aliases = {
+                auth.resource_name: auth.lambda_alias
+                for auth in rest_api.authorizers
+            }
+        return super(TerraformSwaggerGenerator, self).generate_swagger(
+            app, rest_api
+        )
 
     def _uri(self, lambda_arn=None):
         # type: (Optional[str]) -> Any
+        if self._lambda_alias is not None:
+            return '${aws_lambda_alias.api_handler.invoke_arn}'
         return '${aws_lambda_function.api_handler.invoke_arn}'
 
     def _auth_uri(self, authorizer):
         # type: (ChaliceAuthorizer) -> Any
+        if self._authorizer_aliases.get(authorizer.name) is not None:
+            return '${aws_lambda_alias.%s.invoke_arn}' % authorizer.name
         return '${aws_lambda_function.%s.invoke_arn}' % (authorizer.name)

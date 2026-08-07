@@ -955,6 +955,27 @@ def test_will_custom_auth_with_cfn(sample_app):
     }
 
 
+def test_cfn_uses_lambda_alias_for_route_integrations(sample_app):
+    swagger_gen = CFNSwaggerGenerator()
+    rest_api = RestAPI(
+        resource_name='dev',
+        swagger_doc={},
+        lambda_function=mock.Mock(spec=['lambda_alias'], lambda_alias='live'),
+        minimum_compression="",
+        api_gateway_stage="xyz",
+        endpoint_type="EDGE",
+    )
+    doc = swagger_gen.generate_swagger(sample_app, rest_api)
+    uri = doc['paths']['/']['get']['x-amazon-apigateway-integration']['uri']
+    assert uri == {
+        'Fn::Sub': (
+            'arn:${AWS::Partition}:apigateway:${AWS::Region}'
+            ':lambda:path/2015-03-31/functions/'
+            '${APIHandler.Arn}:live/invocations'
+        )
+    }
+
+
 def test_custom_auth_with_tf(sample_app):
     swagger_gen = TerraformSwaggerGenerator()
 
@@ -982,3 +1003,18 @@ def test_custom_auth_with_tf(sample_app):
             'authorizerUri': '${aws_lambda_function.auth.invoke_arn}'
         }
     }
+
+
+def test_tf_uses_lambda_alias_for_route_integrations(sample_app):
+    swagger_gen = TerraformSwaggerGenerator()
+    rest_api = RestAPI(
+        resource_name='dev',
+        swagger_doc={},
+        lambda_function=mock.Mock(spec=['lambda_alias'], lambda_alias='live'),
+        minimum_compression="",
+        api_gateway_stage="xyz",
+        endpoint_type="EDGE",
+    )
+    doc = swagger_gen.generate_swagger(sample_app, rest_api)
+    uri = doc['paths']['/']['get']['x-amazon-apigateway-integration']['uri']
+    assert uri == '${aws_lambda_alias.api_handler.invoke_arn}'

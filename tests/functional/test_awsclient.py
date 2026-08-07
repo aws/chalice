@@ -3879,6 +3879,69 @@ def test_can_update_lambda_event_source(stubbed_session):
     stubbed_session.verify_stubs()
 
 
+def test_can_update_lambda_event_source_function_name(stubbed_session):
+    lambda_stub = stubbed_session.stub('lambda')
+    lambda_stub.update_event_source_mapping(
+        UUID='my-uuid',
+        BatchSize=5,
+        MaximumBatchingWindowInSeconds=60,
+        FunctionName='function:live',
+    ).returns({})
+
+    stubbed_session.activate_stubs()
+    client = TypedAWSClient(stubbed_session)
+    client.update_lambda_event_source(
+        event_uuid='my-uuid', batch_size=5,
+        maximum_batching_window_in_seconds=60,
+        function_name='function:live',
+    )
+    stubbed_session.verify_stubs()
+
+
+def test_can_publish_function_version(stubbed_session):
+    lambda_stub = stubbed_session.stub('lambda')
+    lambda_stub.publish_version(
+        FunctionName='function-name',
+    ).returns({'FunctionArn': 'function-arn:2', 'Version': '2'})
+    lambda_stub.get_function_configuration(
+        FunctionName='function-name:2',
+    ).returns({'State': 'Active', 'LastUpdateStatus': 'Successful'})
+
+    stubbed_session.activate_stubs()
+    client = TypedAWSClient(stubbed_session)
+    result = client.publish_function_version('function-name')
+    assert result == {'FunctionArn': 'function-arn:2', 'Version': '2'}
+    stubbed_session.verify_stubs()
+
+
+def test_can_update_function_alias(stubbed_session):
+    lambda_stub = stubbed_session.stub('lambda')
+    lambda_stub.get_alias(
+        FunctionName='function-name',
+        Name='live',
+    ).returns({
+        'AliasArn': 'function-arn:live',
+        'Name': 'live',
+        'FunctionVersion': '1',
+    })
+    lambda_stub.update_alias(
+        FunctionName='function-name',
+        Name='live',
+        FunctionVersion='2',
+    ).returns({
+        'AliasArn': 'function-arn:live',
+        'Name': 'live',
+        'FunctionVersion': '2',
+    })
+
+    stubbed_session.activate_stubs()
+    client = TypedAWSClient(stubbed_session)
+    result = client.create_or_update_function_alias(
+        'function-name', 'live', '2')
+    assert result['FunctionVersion'] == '2'
+    stubbed_session.verify_stubs()
+
+
 def test_can_create_log_group(stubbed_session):
     logs_stub = stubbed_session.stub('logs')
     logs_stub.create_log_group(

@@ -276,6 +276,24 @@ will be no reserved concurrency allocations. For more information, see `AWS
 Documentation on managing concurrency`_.
 
 
+``lambda_alias``
+~~~~~~~~~~~~~~~~
+
+The name of the AWS Lambda alias that Chalice should update after each
+deployment.  When this value is configured, Chalice publishes a new Lambda
+function version after updating ``$LATEST`` and then updates the alias to
+point to that published version.  Event sources and API integrations are
+configured to invoke the alias ARN.  This value can be provided per stage as
+well as per Lambda function.
+
+If you remove this setting, Chalice will stop publishing versions and updating
+the alias.  On the next deploy, Chalice-managed integrations are updated back
+to the unqualified Lambda function ARN.  For direct deployments, Chalice does
+not delete the existing Lambda alias from AWS.  Delete the alias manually if it
+is no longer needed.  For packaged deployments, the generated SAM or Terraform
+template no longer includes the alias resource when this setting is removed.
+
+
 ``subnet_ids``
 ~~~~~~~~~~~~~~
 
@@ -388,6 +406,7 @@ that can be applied per function:
 * ``lambda_memory_size``
 * ``lambda_timeout``
 * ``layers``
+* ``lambda_alias``
 * ``manage_iam_role``
 * ``reserved_concurrency``
 * ``security_group_ids``

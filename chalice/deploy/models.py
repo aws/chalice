@@ -205,6 +205,7 @@ class LambdaFunction(ManagedModel):
     layers: List[str]
     managed_layer: Opt[LambdaLayer] = None
     log_group: Opt[LogGroup] = None
+    lambda_alias: Opt[str] = None
 
     def dependencies(self) -> List[Model]:
         resources: List[Model] = []
