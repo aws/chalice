@@ -226,6 +226,7 @@ class CaseInsensitiveMapping(Mapping):
 class Authorizer(object):
     name: str = ''
     scopes: List[str] = []
+    config: Optional['BuiltinAuthConfig'] = None
 
     def to_swagger(self) -> Dict[str, Any]:
         raise NotImplementedError("to_swagger")
