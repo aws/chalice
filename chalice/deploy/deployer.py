@@ -103,6 +103,7 @@ from chalice.constants import MAX_LAMBDA_DEPLOYMENT_SIZE
 from chalice.constants import VPC_ATTACH_POLICY
 from chalice.constants import DEFAULT_LAMBDA_TIMEOUT
 from chalice.constants import DEFAULT_LAMBDA_MEMORY_SIZE
+from chalice.constants import DEFAULT_LAMBDA_EPHEMERAL_STORAGE
 from chalice.constants import DEFAULT_TLS_VERSION
 from chalice.constants import SQS_EVENT_SOURCE_POLICY
 from chalice.constants import KINESIS_EVENT_SOURCE_POLICY
@@ -422,10 +423,12 @@ class BaseDeployStep(object):
 class InjectDefaults(BaseDeployStep):
     def __init__(self, lambda_timeout=DEFAULT_LAMBDA_TIMEOUT,
                  lambda_memory_size=DEFAULT_LAMBDA_MEMORY_SIZE,
+                 lambda_ephemeral_storage=DEFAULT_LAMBDA_EPHEMERAL_STORAGE,
                  tls_version=DEFAULT_TLS_VERSION):
-        # type: (int, int, str) -> None
+        # type: (int, int, int, str) -> None
         self._lambda_timeout = lambda_timeout
         self._lambda_memory_size = lambda_memory_size
+        self._lambda_ephemeral_storage = lambda_ephemeral_storage
         self._tls_version = DEFAULT_TLS_VERSION
 
     def handle_lambdafunction(self, config, resource):
@@ -434,6 +437,8 @@ class InjectDefaults(BaseDeployStep):
             resource.timeout = self._lambda_timeout
         if resource.memory_size is None:
             resource.memory_size = self._lambda_memory_size
+        if resource.ephemeral_storage is None:
+            resource.ephemeral_storage = self._lambda_ephemeral_storage
 
     def handle_domainname(self, config, resource):
         # type: (Config, models.DomainName) -> None

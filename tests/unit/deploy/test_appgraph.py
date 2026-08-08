@@ -126,6 +126,7 @@ class TestApplicationGraphBuilder(object):
             tags=config.tags,
             timeout=None,
             memory_size=None,
+            ephemeral_storage=None,
             deployment_package=models.DeploymentPackage(
                 models.Placeholder.BUILD_STAGE),
             role=models.PreCreatedIAMRole('role:arn'),
@@ -159,6 +160,7 @@ class TestApplicationGraphBuilder(object):
             tags=config.tags,
             timeout=None,
             memory_size=None,
+            ephemeral_storage=None,
             deployment_package=models.DeploymentPackage(
                 models.Placeholder.BUILD_STAGE),
             role=models.PreCreatedIAMRole('role:arn'),
@@ -195,6 +197,7 @@ class TestApplicationGraphBuilder(object):
             tags=config.tags,
             timeout=None,
             memory_size=None,
+            ephemeral_storage=None,
             deployment_package=models.DeploymentPackage(
                 models.Placeholder.BUILD_STAGE),
             role=models.PreCreatedIAMRole('role:arn'),
@@ -251,6 +254,7 @@ class TestApplicationGraphBuilder(object):
             tags=config.tags,
             timeout=None,
             memory_size=None,
+            ephemeral_storage=None,
             deployment_package=models.DeploymentPackage(
                 models.Placeholder.BUILD_STAGE),
             role=models.PreCreatedIAMRole('role:arn'),
@@ -310,6 +314,7 @@ class TestApplicationGraphBuilder(object):
             tags=config.tags,
             timeout=None,
             memory_size=None,
+            ephemeral_storage=None,
             deployment_package=models.DeploymentPackage(
                 models.Placeholder.BUILD_STAGE),
             role=models.PreCreatedIAMRole('role:arn'),
@@ -372,6 +377,7 @@ class TestApplicationGraphBuilder(object):
             tags=config.tags,
             timeout=None,
             memory_size=None,
+            ephemeral_storage=None,
             deployment_package=models.DeploymentPackage(
                 models.Placeholder.BUILD_STAGE),
             role=models.PreCreatedIAMRole('role:arn'),
