@@ -56,36 +56,44 @@ class StatFileWatcher(FileWatcher):
         for rootdir, _, filenames in self._osutils.walk(root_dir):
             for filename in filenames:
                 path = self._osutils.joinpath(rootdir, filename)
-                self._mtime_cache[path] = self._osutils.mtime(path)
+                try:
+                    self._mtime_cache[path] = self._osutils.mtime(path)
+                except OSError:
+                    pass
 
     def _single_pass_poll(self, root_dir, callback):
         # type: (str, Callable[[], None]) -> None
         new_mtimes = {}  # type: Dict[str, float]
         for path in self._recursive_walk_files(root_dir):
-            if self._is_changed_file(path, new_mtimes):
-                callback()
-                return
+            self._is_changed_file(path, new_mtimes)
+
         if new_mtimes != self._mtime_cache:
-            # Files were removed.
-            LOGGER.debug("Files removed, triggering restart.")
             self._mtime_cache = new_mtimes
+            LOGGER.debug("Change detected, triggering restart.")
             callback()
-            return
 
     def _is_changed_file(self, path, new_mtimes):
         # type: (str, Dict[str, float]) -> bool
         last_mtime = self._mtime_cache.get(path)
-        if last_mtime is None:
-            LOGGER.debug("File added: %s, triggering restart.", path)
-            return True
+
         try:
             new_mtime = self._osutils.mtime(path)
+            new_mtimes[path] = new_mtime
+
+            if last_mtime is None:
+                LOGGER.debug("File added: %s, triggering restart.", path)
+                return True
+
             if new_mtime > last_mtime:
                 LOGGER.debug("File updated: %s, triggering restart.", path)
                 return True
-            new_mtimes[path] = new_mtime
+
             return False
         except (OSError, IOError):
+            # File does not exist (symlink to nothing, for
+            # example). But did it previously?
+            if last_mtime is not None:
+                return True
             return False
 
     def _recursive_walk_files(self, root_dir):
