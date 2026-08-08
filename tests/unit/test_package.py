@@ -13,6 +13,9 @@ from chalice.deploy import models
 from chalice.deploy.swagger import SwaggerGenerator
 from chalice.package import PackageOptions
 from chalice.utils import OSUtils
+from chalice.deploy.packager import (
+    DependencyBuilder as DependencyBuilderPackage
+)
 
 
 @pytest.fixture
@@ -306,6 +309,7 @@ class TemplateTestBase(object):
             security_group_ids=[],
             subnet_ids=[],
             layers=[],
+            architecture='x86_64',
             reserved_concurrency=None,
         )
 
@@ -1197,6 +1201,7 @@ class TestSAMTemplate(TemplateTestBase):
             security_group_ids=[],
             subnet_ids=[],
             layers=[],
+            architecture='x86_64',
             reserved_concurrency=None,
         )
         template = self.template_gen.generate([function])
@@ -1204,6 +1209,9 @@ class TestSAMTemplate(TemplateTestBase):
         assert cfn_resource == {
             'Type': 'AWS::Serverless::Function',
             'Properties': {
+                'Architectures': [
+                    'x86_64',
+                ],
                 'CodeUri': 'foo.zip',
                 'Handler': 'app.app',
                 'MemorySize': 128,
@@ -1294,6 +1302,7 @@ class TestSAMTemplate(TemplateTestBase):
             security_group_ids=[],
             subnet_ids=[],
             layers=[],
+            architecture='x86_64',
             reserved_concurrency=None,
         )
         template = self.template_gen.generate([function])
@@ -1301,6 +1310,9 @@ class TestSAMTemplate(TemplateTestBase):
         assert cfn_resource == {
             'Type': 'AWS::Serverless::Function',
             'Properties': {
+                'Architectures': [
+                    'x86_64',
+                ],
                 'CodeUri': 'foo.zip',
                 'Handler': 'app.app',
                 'MemorySize': 128,
@@ -2102,6 +2114,47 @@ class TestTemplateDeepMerger(object):
         assert result == {
             'key': 'foo'
         }
+
+
+class TestArchitectureSupport:
+
+    def test_pip_platforms_enumerate_aarch64_for_arm64(self):
+        mock_osutils = mock.Mock(spec=OSUtils)
+        builder = DependencyBuilderPackage(mock_osutils)
+        platforms = builder._get_pip_platforms('cp312', architecture='arm64')
+        # Should contain aarch64, not x86_64
+        assert 'manylinux_2_17_aarch64' in platforms
+        assert 'manylinux2014_aarch64' in platforms
+        assert 'x86_64' not in str(platforms)
+
+    def test_compatible_wheel_for_arm64(self):
+        mock_osutils = mock.Mock(spec=OSUtils)
+        builder = DependencyBuilderPackage(mock_osutils)
+        assert builder._is_compatible_wheel_filename(
+            'cp312', 'foo-1.0-cp312-cp312-manylinux_2_34_aarch64.whl',
+            architecture='arm64'
+        )
+        # x86_64 wheel should NOT be compatible when targeting arm64
+        assert not builder._is_compatible_wheel_filename(
+            'cp312', 'foo-1.0-cp312-cp312-manylinux_2_34_x86_64.whl',
+            architecture='arm64'
+        )
+
+    def test_x86_64_wheel_incompatible_with_arm64(self):
+        mock_osutils = mock.Mock(spec=OSUtils)
+        builder = DependencyBuilderPackage(mock_osutils)
+        assert not builder._is_compatible_platform_tag(
+            'cp312', 'manylinux_2_34_x86_64', architecture='arm64'
+        )
+
+    def test_pure_python_wheel_compatible_with_arm64(self):
+        mock_osutils = mock.Mock(spec=OSUtils)
+        builder = DependencyBuilderPackage(mock_osutils)
+        # Pure python wheels (platform with 'any') work on any architecture
+        assert builder._is_compatible_wheel_filename(
+            'cp312', 'requests-2.28.0-py3-none-any.whl',
+            architecture='arm64'
+        )
 
 
 @pytest.mark.parametrize('filename,is_yaml', [

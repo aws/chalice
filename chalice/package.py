@@ -282,6 +282,9 @@ class SAMTemplateGenerator(TemplateGenerator):
             }  # type: Dict[str, Any]
             lambdafunction_definition['Properties'].update(layers_config)
 
+        architectures_config = {'Architectures': [resource.architecture]}
+        lambdafunction_definition['Properties'].update(architectures_config)
+
         if resource.log_group is not None:
             num_days = resource.log_group.retention_in_days
             log_name = self._register_cfn_resource_name(
@@ -1253,6 +1256,7 @@ class TerraformGenerator(TemplateGenerator):
         func_definition = {
             'function_name': resource.function_name,
             'runtime': resource.runtime,
+            'architectures': [resource.architecture],
             'handler': resource.handler,
             'memory_size': resource.memory_size,
             'tags': resource.tags,

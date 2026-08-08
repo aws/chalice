@@ -15,6 +15,7 @@ from chalice.deploy.validate import validate_unique_function_names
 from chalice.deploy.validate import validate_feature_flags
 from chalice.deploy.validate import validate_endpoint_type
 from chalice.deploy.validate import validate_resource_policy
+from chalice.deploy.validate import validate_lambda_architecture
 from chalice.deploy.validate import ExperimentalFeatureError
 
 
@@ -387,3 +388,40 @@ def test_validate_env_var_is_string_for_lambda_functions(sample_app):
     )
     with pytest.raises(ValueError):
         validate_configuration(config)
+
+
+def test_can_validate_lambda_architecture(sample_app):
+    config = Config.create(
+        chalice_app=sample_app, lambda_architecture='aarch64')
+    with pytest.raises(ValueError):
+        validate_lambda_architecture(config)
+
+    config = Config.create(
+        chalice_app=sample_app, lambda_architecture='arm64')
+    validate_lambda_architecture(config)
+
+    config = Config.create(
+        chalice_app=sample_app, lambda_architecture='x86_64')
+    validate_lambda_architecture(config)
+
+
+def test_validate_lambda_architecture_per_function(sample_app):
+    @sample_app.lambda_function()
+    def myfunc(event, context):
+        pass
+
+    config = Config(
+        chalice_stage='dev',
+        config_from_disk={
+            'stages': {
+                'dev': {
+                    'lambda_functions': {
+                        'myfunc': {'lambda_architecture': 'aarch64'}
+                    }
+                }
+            }
+        },
+        user_provided_params={'chalice_app': sample_app},
+    )
+    with pytest.raises(ValueError):
+        validate_lambda_architecture(config)

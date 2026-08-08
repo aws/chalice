@@ -491,7 +491,8 @@ class PlanStage(object):
                 'memory_size': resource.memory_size,
                 'security_group_ids': resource.security_group_ids,
                 'subnet_ids': resource.subnet_ids,
-                'layers': layers
+                'layers': layers,
+                'architecture': resource.architecture,
             }
 
             api_calls.extend([
@@ -523,7 +524,8 @@ class PlanStage(object):
                 'memory_size': resource.memory_size,
                 'security_group_ids': resource.security_group_ids,
                 'subnet_ids': resource.subnet_ids,
-                'layers': layers
+                'layers': layers,
+                'architecture': resource.architecture,
             }
             api_calls.extend([
                 (models.APICall(

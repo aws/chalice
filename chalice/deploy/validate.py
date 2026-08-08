@@ -1,7 +1,7 @@
 import sys
 import warnings
 
-from typing import Dict, List, Set, Iterator, Optional, Any  # noqa
+from typing import Dict, List, Set, Iterator, Optional, Any, Tuple  # noqa
 
 from chalice import app  # noqa
 from chalice.config import Config  # noqa
@@ -50,6 +50,7 @@ def validate_configuration(config):
     validate_resource_policy(config)
     validate_sqs_configuration(config.chalice_app)
     validate_environment_variables_type(config)
+    validate_lambda_architecture(config)
 
 
 def validate_resource_policy(config):
@@ -277,3 +278,23 @@ def _validate_environment_variables(environment_variables):
             raise ValueError("Environment variable values must be strings, "
                              "got 'type' %s for key '%s'" % (
                                  type(value).__name__, key))
+
+
+def validate_lambda_architecture(config):
+    # type: (Config) -> None
+    valid_architectures = ('x86_64', 'arm64')
+    _check_architecture(
+        config.lambda_architecture, valid_architectures)
+    for name in _get_all_function_names(config.chalice_app):
+        _check_architecture(
+            config.scope(config.chalice_stage, name).lambda_architecture,
+            valid_architectures)
+
+
+def _check_architecture(architecture, valid_architectures):
+    # type: (str, Tuple[str, ...]) -> None
+    if architecture not in valid_architectures:
+        raise ValueError(
+            "Invalid lambda_architecture value: '%s'. "
+            "Must be one of: %s" % (
+                architecture, ", ".join(valid_architectures)))
