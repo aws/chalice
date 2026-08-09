@@ -319,9 +319,8 @@ class LocalGatewayAuthorizer(object):
                     and "authorization" in lambda_event["headers"]:
                 token = lambda_event["headers"]["authorization"]
                 claims = self._decode_jwt_payload(token)
-
                 try:
-                    cognito_username = claims["cognito:username"]
+                    cognito_username = claims["username"]
                 except KeyError:
                     # If a key error is raised when trying to get the cognito
                     # username then it is a machine-to-machine communication.
