@@ -812,6 +812,11 @@ These classes are used when defining built-in authorizers in Chalice.
       will be accessible in the ``app.current_request.context``
       in all subsequent authorized requests for this user.
 
+   .. attribute:: usage_identifier_key
+
+      An optional string value that represents a usage plan's api
+      key if the ``apiKeySource`` for that plan is set to ``AUTHORIZER``.
+
 .. class:: AuthRoute(path, methods)
 
    This class be used in the ``routes`` attribute of a

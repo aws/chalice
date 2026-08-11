@@ -1507,6 +1507,39 @@ def test_root_resource(auth_request):
     }
 
 
+def test_auth_response_with_usage_identifier_key(auth_request):
+    event = {
+        'type': 'TOKEN',
+        'authorizationToken': 'authtoken',
+        'methodArn': 'arn:aws:execute-api:us-west-2:1:id/dev/GET/a',
+    }
+    auth_app = app.Chalice('builtin-auth')
+
+    response = {
+        'context': {},
+        'principalId': 'principal',
+        'policyDocument': {
+            'Version': '2012-10-17',
+            'Statement': [
+                {'Action': 'execute-api:Invoke',
+                 'Effect': 'Allow',
+                 'Resource': [
+                     'arn:aws:execute-api:us-west-2:1:id/dev/*/a'
+                 ]}
+            ]
+        },
+        'usageIdentifierKey': 'api-key'
+    }
+
+    @auth_app.authorizer()
+    def builtin_auth(auth_request):
+        return app.AuthResponse(['/a'], 'principal',
+                                usage_identifier_key='api-key')
+
+    actual = builtin_auth(event, None)
+    assert actual == response
+
+
 def test_can_register_scheduled_event_with_str(sample_app):
     @sample_app.schedule('rate(1 minute)')
     def foo(event):
