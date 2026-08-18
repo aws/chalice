@@ -142,8 +142,19 @@ class RouteMatcher(object):
         captured = {}
         for route_url in self.route_urls:
             url_parts = route_url.split('/')
-            if len(parts) == len(url_parts):
-                for i, j in zip(parts, url_parts):
+            parts_copy = parts.copy()
+
+            # Handle a greedy catch-all path variable (ie. "proxy+")
+            if url_parts[-1].endswith('+}'):
+                pos = len(url_parts) - 1
+                if len(parts) > pos:
+                    catch_all_param = url_parts[-1][1:-2]
+                    captured[catch_all_param] = '/'.join(parts[pos:])
+                    url_parts = url_parts[:-1]
+                    parts_copy = parts_copy[:pos]
+
+            if len(parts_copy) == len(url_parts):
+                for i, j in zip(parts_copy, url_parts):
                     if j.startswith('{') and j.endswith('}'):
                         captured[j[1:-1]] = i
                         continue

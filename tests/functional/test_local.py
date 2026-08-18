@@ -318,3 +318,17 @@ def test_can_reload_server(unused_tcp_port, basic_app, http_session):
             assert http_session.json_get(url) == {'version': 'reloaded'}
         finally:
             p.terminate()
+
+
+def test_can_parse_proxy_catch_all_route(
+        config, local_server_factory):
+    demo = app.Chalice('app-name')
+
+    @demo.route('/{proxy+}')
+    def proxy_view(proxy):
+        return proxy
+
+    local_server, port = local_server_factory(demo, config)
+    response = local_server.make_call(requests.get, '/any/thing', port)
+    assert response.status_code == 200
+    assert response.text == 'any/thing'
