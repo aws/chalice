@@ -1711,7 +1711,9 @@ class TypedAWSClient(object):
         source_account: Optional[str] = None,
     ) -> None:
         policy = self.get_function_policy(function_arn)
-        if self._policy_gives_access(policy, source_arn, service_name):
+        if self._policy_gives_access(
+            policy, source_arn, service_name, source_account
+        ):
             return
         random_id = self._random_id()
         dns_suffix = self.endpoint_dns_suffix_from_arn(source_arn)
@@ -1729,7 +1731,11 @@ class TypedAWSClient(object):
         self._client('lambda').add_permission(**kwargs)
 
     def _policy_gives_access(
-        self, policy: Dict[str, Any], source_arn: str, service_name: str
+        self,
+        policy: Dict[str, Any],
+        source_arn: str,
+        service_name: str,
+        source_account: Optional[str] = None,
     ) -> bool:
         # Here's what a sample policy looks like after add_permission()
         # has been previously called:
@@ -1756,7 +1762,7 @@ class TypedAWSClient(object):
         # So we need to check if there's a policy that looks like this.
         for statement in policy.get('Statement', []):
             if self._statement_gives_arn_access(
-                statement, source_arn, service_name
+                statement, source_arn, service_name, source_account
             ):
                 return True
         return False
