@@ -381,6 +381,34 @@ def test_can_map_function_params():
     """) == {'dynamodb': set(['list_tables'])}
 
 
+def test_does_not_reuse_function_return_type_across_args():
+    assert aws_calls("""\
+        import boto3
+        lambda_service = 'lambda'
+        ddb_service = 'dynamodb'
+        def create_client(service_name):
+            return boto3.client(service_name)
+        lambda_client = create_client(lambda_service)
+        ddb_client = create_client(ddb_service)
+        lambda_client.get_function(FunctionName='name')
+        ddb_client.tag_resource(ResourceArn='arn', Tags=[])
+    """) == {
+        'lambda': set(['get_function']),
+        'dynamodb': set(['tag_resource']),
+    }
+
+
+def test_does_not_reuse_function_params_across_calls():
+    assert aws_calls("""\
+        import boto3
+        service_name = 'dynamodb'
+        def create_client(service_name):
+            return boto3.client(service_name)
+        create_client(service_name).list_tables()
+        create_client(get_service_name()).delete_table(TableName='name')
+    """) == {'dynamodb': set(['list_tables'])}
+
+
 def test_can_understand_shadowed_vars_from_func_arg():
     assert aws_calls("""\
         import boto3
