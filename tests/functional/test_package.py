@@ -994,6 +994,25 @@ def test_can_create_app_packager_with_no_autogen(tmpdir, stubbed_session):
     assert 'sam.json' in contents
 
 
+def test_package_rejects_private_api_without_policy(tmpdir, stubbed_session):
+    appdir = _create_app_structure(tmpdir)
+    outdir = tmpdir.mkdir('outdir')
+    config = Config.create(
+        project_dir=str(appdir),
+        chalice_app=sample_app(),
+        autogen_policy=True,
+        api_gateway_endpoint_type='PRIVATE',
+    )
+    options = PackageOptions(TypedAWSClient(session=stubbed_session))
+    p = package.create_app_packager(config, options)
+
+    with pytest.raises(ValueError) as e:
+        p.package_app(config, str(outdir), 'dev')
+
+    assert 'api_gateway_policy_file' in str(e.value)
+    assert 'api_gateway_endpoint_vpce' in str(e.value)
+
+
 def test_can_create_app_packager_with_yaml_extension(tmpdir, stubbed_session):
     appdir = _create_app_structure(tmpdir)
 
