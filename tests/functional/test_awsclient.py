@@ -3374,6 +3374,41 @@ def test_skip_if_permission_already_granted_to_s3(stubbed_session):
     stubbed_session.verify_stubs()
 
 
+def test_adds_s3_permission_without_source_account(stubbed_session):
+    lambda_client = stubbed_session.stub('lambda')
+    policy = {
+        'Id': 'default',
+        'Statement': [{
+            'Action': 'lambda:InvokeFunction',
+            'Condition': {
+                'ArnLike': {
+                    'AWS:SourceArn': 'arn:aws:s3:::mybucket',
+                }
+            },
+            'Effect': 'Allow',
+            'Principal': {'Service': 's3.amazonaws.com'},
+            'Resource': 'resource-arn',
+            'Sid': 'statement-id',
+        }],
+        'Version': '2012-10-17'
+    }
+    lambda_client.get_policy(
+        FunctionName='function-arn').returns({'Policy': json.dumps(policy)})
+    lambda_client.add_permission(
+        Action='lambda:InvokeFunction',
+        FunctionName='function-arn',
+        StatementId=stub.ANY,
+        Principal='s3.amazonaws.com',
+        SourceArn='arn:aws:s3:::mybucket',
+        SourceAccount='12345',
+    ).returns({})
+    stubbed_session.activate_stubs()
+    awsclient = TypedAWSClient(stubbed_session)
+    awsclient.add_permission_for_s3_event(
+        'mybucket', 'function-arn', '12345')
+    stubbed_session.verify_stubs()
+
+
 def test_can_disconnect_bucket_to_lambda_merged(stubbed_session):
     s3 = stubbed_session.stub('s3')
     s3.get_bucket_notification_configuration(Bucket='mybucket').returns({

@@ -1,0 +1,5 @@
+{
+  "type": "bugfix",
+  "category": "policy",
+  "description": "Fix the generated S3 AbortMultipartUpload action and account-scoped S3 event Lambda permission checks."
+}
