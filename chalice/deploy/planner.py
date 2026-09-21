@@ -14,7 +14,7 @@ from chalice.awsclient import TypedAWSClient, ResourceDoesNotExistError  # noqa
 
 InstructionMsg = Union[models.Instruction, Tuple[models.Instruction, str]]
 MarkedResource = Dict[str, List[models.RecordResource]]
-CacheTuples = Union[Tuple[str, str, str], Tuple[str, str]]
+CacheTuples = Union[Tuple[str, str, str, Optional[str]], Tuple[str, str]]
 ApiMap = Union[models.RestAPI, models.WebsocketAPI]
 
 
@@ -25,13 +25,14 @@ class RemoteState(object):
         self._cache = {}  # type: Dict[CacheTuples, bool]
         self._deployed_resources = deployed_resources
 
-    def _cache_key(self, resource):
-        # type: (models.ManagedModel) -> CacheTuples
+    def _cache_key(self, resource, domain_name=None):
+        # type: (models.ManagedModel, Optional[str]) -> CacheTuples
         if isinstance(resource, models.APIMapping):
             return (
                 resource.resource_type,
                 resource.resource_name,
-                resource.mount_path
+                resource.mount_path,
+                domain_name,
             )
         return resource.resource_type, resource.resource_name
 
@@ -58,7 +59,7 @@ class RemoteState(object):
 
     def resource_exists(self, resource, *args):
         # type: (models.ManagedModel, Optional[Any]) -> bool
-        key = self._cache_key(resource)
+        key = self._cache_key(resource, *args)
         if key in self._cache:
             return self._cache[key]
         try:
