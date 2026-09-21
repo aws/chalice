@@ -711,6 +711,103 @@ def test_can_analyze_transfer_manager_methods():
     """) == {'s3': set(['download_file'])}
 
 
+def test_can_call_nested_function():
+    assert chalice_aws_calls("""\
+        from chalice import Chalice
+        app = Chalice(app_name='nested')
+
+        @app.route('/')
+        def index():
+            def response_wrapper(text):
+                return {'text': text}
+            return response_wrapper('hello')
+    """) == {}
+
+
+def test_can_infer_client_from_nested_function():
+    assert chalice_aws_calls("""\
+        from chalice import Chalice
+        import boto3
+        app = Chalice(app_name='nested')
+
+        @app.route('/')
+        def index():
+            def create_client(service):
+                return boto3.client(service)
+            service = 's3'
+            create_client(service).list_buckets()
+    """) == {'s3': set(['list_buckets'])}
+
+
+def test_nested_function_shadows_global_function():
+    assert chalice_aws_calls("""\
+        from chalice import Chalice
+        import boto3
+        app = Chalice(app_name='nested')
+
+        def create_client(unused):
+            return boto3.client('ec2')
+
+        @app.route('/')
+        def index():
+            def create_client(service):
+                return boto3.client(service)
+            service = 's3'
+            create_client(service).list_buckets()
+    """) == {'s3': set(['list_buckets'])}
+
+
+def test_nested_function_resolves_enclosing_client():
+    assert chalice_aws_calls("""\
+        from chalice import Chalice
+        import boto3
+        app = Chalice(app_name='nested')
+        client = boto3.client('ec2')
+
+        @app.route('/')
+        def index():
+            client = boto3.client('s3')
+            def helper():
+                def inner():
+                    client.list_buckets()
+                inner()
+            helper()
+    """) == {'s3': set(['list_buckets'])}
+
+
+def test_nested_function_can_call_enclosing_helper():
+    assert chalice_aws_calls("""\
+        from chalice import Chalice
+        import boto3
+        app = Chalice(app_name='nested')
+
+        @app.route('/')
+        def index():
+            def create_client():
+                return boto3.client('s3')
+            def helper():
+                create_client().list_buckets()
+            helper()
+    """) == {'s3': set(['list_buckets'])}
+
+
+def test_nested_function_explicit_global_ignores_enclosing_client():
+    assert chalice_aws_calls("""\
+        from chalice import Chalice
+        import boto3
+        app = Chalice(app_name='nested')
+        client = boto3.client('ec2')
+
+        @app.route('/')
+        def index():
+            client = boto3.client('s3')
+            def helper():
+                global client
+                client.describe_instances()
+            helper()
+    """) == {'ec2': set(['describe_instances'])}
+
+
 def test_can_handle_replacing_function_name():
     assert chalice_aws_calls("""\
         from chalice import Chalice

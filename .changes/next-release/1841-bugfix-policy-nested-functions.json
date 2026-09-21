@@ -1,0 +1,5 @@
+{
+  "type": "bugfix",
+  "category": "policy",
+  "description": "Fix policy generation for nested helper functions and preserve their enclosing and module scopes."
+}

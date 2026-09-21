@@ -233,38 +233,41 @@ class APICallCollector(ast.NodeVisitor):
 
 
 class ChainedSymbolTable(object):
-    def __init__(self, local_table, global_table):
-        # type: (symtable.SymbolTable, symtable.SymbolTable) -> None
+    def __init__(self,
+                 local_table,  # type: symtable.SymbolTable
+                 global_table,  # type: symtable.SymbolTable
+                 parent=None,  # type: Optional[ChainedSymbolTable]
+                 ):
+        # type: (...) -> None
         # If you're in the module scope, then pass in
         # the same symbol table for local and global.
         self._local_table = local_table
         self._global_table = global_table
+        self._parent = parent
 
     def new_sub_table(self, local_table):
         # type: (symtable.SymbolTable) -> ChainedSymbolTable
-        # Create a new symbol table using this instances
-        # local table as the new global table and the passed
-        # in local table as the new local table.
-        return self.__class__(local_table, self._local_table)
+        # Keep module globals separate from enclosing function scopes.
+        return self.__class__(local_table, self._global_table, self)
+
+    def lookup_symbol(self, name):
+        # type: (str) -> symtable.Symbol
+        symbol = self._local_table.lookup(name)
+        if symbol.is_global():
+            return self._global_table.lookup(name)
+        if symbol.is_free() and self._parent is not None:
+            return self._parent.lookup_symbol(name)
+        return symbol
 
     def get_inferred_type(self, name):
         # type: (str) -> Any
         # Given a symbol name, check whether a type
         # has been inferred.
-        # The stdlib symtable will already fall back to
-        # global scope if necessary.
-        symbol = self._local_table.lookup(name)
-        if symbol.is_global():
-            try:
-                global_symbol = self._global_table.lookup(name)
-            except KeyError:
-                # It's not an error if a symbol.is_global()
-                # but is not in our "_global_table", because
-                # we're not considering the builtin scope.
-                # In this case we just say that there is no
-                # type we've inferred.
-                return None
-            return getattr(global_symbol, 'inferred_type', None)
+        try:
+            symbol = self.lookup_symbol(name)
+        except KeyError:
+            # Builtins have no inferred type in the module symbol table.
+            return None
         return getattr(symbol, 'inferred_type', None)
 
     def set_inferred_type(self, name, inferred_type):
@@ -278,11 +281,14 @@ class ChainedSymbolTable(object):
             if child.get_name() == name:
                 if lineno is not None:
                     if child.get_lineno() == lineno:
-                        return self.__class__(child, self._local_table)
+                        return self.new_sub_table(child)
                 else:
-                    return self.__class__(child, self._local_table)
+                    return self.new_sub_table(child)
+        if self._parent is not None:
+            return self._parent.lookup_sub_namespace(name, lineno)
         for child in self._global_table.get_children():
-            if child.get_name() == name:
+            if child.get_name() == name and (
+                    lineno is None or child.get_lineno() == lineno):
                 return self.__class__(child, self._global_table)
         raise ValueError("Unknown symbol name: %s" % name)
 
@@ -305,9 +311,7 @@ class ChainedSymbolTable(object):
 
     def lookup_ast_node_for_symbol(self, name):
         # type: (str) -> ast.AST
-        symbol = self._local_table.lookup(name)
-        if symbol.is_global():
-            symbol = self._global_table.lookup(name)
+        symbol = self.lookup_symbol(name)
         ast_node = getattr(cast(TypedSymbol, symbol), 'ast_node', None)
         if ast_node is None:
             raise ValueError(
@@ -504,10 +508,11 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
         # function, then we know that the inferred type for
         # calling the function is the .return_type type.
         function_name = node.func.id
+        ast_node = cast(ast.FunctionDef,
+                        self._symbol_table.lookup_ast_node_for_symbol(
+                            function_name))
         sub_table = self._symbol_table.lookup_sub_namespace(
-            function_name, node.lineno)
-        ast_node = self._symbol_table.lookup_ast_node_for_symbol(
-            function_name)
+            function_name, ast_node.lineno)
 
         self._map_function_params(sub_table, node, ast_node)
 
