@@ -2137,6 +2137,19 @@ class TestUpdateLambdaFunction(object):
         awsclient.update_function('name', b'foo')
         stubbed_session.verify_stubs()
 
+    def test_update_function_code_with_handler(self, stubbed_session):
+        lambda_client = stubbed_session.stub('lambda')
+        lambda_client.update_function_code(
+            FunctionName='name', ZipFile=b'foo').returns(self.SUCCESS_RESPONSE)
+        lambda_client.update_function_configuration(
+            FunctionName='name',
+            Handler='chalicelib.workers.worker').returns(self.SUCCESS_RESPONSE)
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        awsclient.update_function(
+            'name', b'foo', handler='chalicelib.workers.worker')
+        stubbed_session.verify_stubs()
+
     def test_update_function_code_with_runtime(self, stubbed_session):
         lambda_client = stubbed_session.stub('lambda')
         lambda_client.update_function_code(

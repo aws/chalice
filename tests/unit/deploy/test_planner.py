@@ -673,6 +673,20 @@ class TestPlanLambdaFunction(BasePlannerTests):
         # delete_function_concurrency
         self.assert_apicall_equals(plan[1], expected[1])
 
+    @pytest.mark.parametrize('old_handler,new_handler', [
+        ('app.worker', 'chalicelib.workers.worker'),
+        ('chalicelib.workers.worker', 'app.worker'),
+        ('app.worker', 'app.renamed_worker'),
+    ])
+    def test_updates_existing_lambda_handler(self, old_handler, new_handler):
+        function = create_function_resource('worker', handler=old_handler)
+        self.remote_state.declare_resource_exists(replace(function))
+        function.handler = new_handler
+        plan = self.determine_plan(function)
+        assert plan[0].method_name == 'update_function'
+        assert plan[0].params['handler'] == new_handler
+        assert plan[0].params['function_name'] == 'appname-dev-worker'
+
     def test_can_update_lambda_function_code(self):
         function = create_function_resource('function_name')
         copy_of_function = replace(function)
@@ -686,6 +700,7 @@ class TestPlanLambdaFunction(BasePlannerTests):
             'role_arn': 'role:arn',
             'zip_contents': mock.ANY,
             'runtime': 'python2.7',
+            'handler': 'app.app',
             'environment_variables': {},
             'xray': None,
             'tags': {},

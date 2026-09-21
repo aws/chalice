@@ -1,0 +1,5 @@
+{
+  "type": "bugfix",
+  "category": "deploy",
+  "description": "Update the Lambda handler configuration when the entry-point callable changes."
+}

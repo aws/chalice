@@ -516,6 +516,7 @@ class PlanStage(object):
                 'zip_contents': self._osutils.get_file_contents(
                     filename, binary=True),
                 'runtime': resource.runtime,
+                'handler': resource.handler,
                 'environment_variables': resource.environment_variables,
                 'xray': resource.xray,
                 'tags': resource.tags,
