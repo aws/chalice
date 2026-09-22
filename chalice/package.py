@@ -827,7 +827,7 @@ class TerraformGenerator(TemplateGenerator):
             'terraform': {
                 'required_version': '>= 0.12.26, < 1.4.0',
                 'required_providers': {
-                    'aws': {'version': '>= 2, < 5'},
+                    'aws': {'version': '>= 2, < 5.43.0'},
                     'null': {'version': '>= 2, < 4'}
                 }
             },
