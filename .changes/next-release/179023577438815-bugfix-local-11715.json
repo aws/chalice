@@ -1,0 +1,5 @@
+{
+  "type": "bugfix",
+  "category": "local",
+  "description": "Fix path parameters from a non matching route leaking into the matched route in local mode."
+}
