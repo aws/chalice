@@ -489,6 +489,7 @@ class PlanStage(object):
                 'tags': resource.tags,
                 'timeout': resource.timeout,
                 'memory_size': resource.memory_size,
+                'ephemeral_storage': resource.ephemeral_storage,
                 'security_group_ids': resource.security_group_ids,
                 'subnet_ids': resource.subnet_ids,
                 'layers': layers
@@ -521,6 +522,7 @@ class PlanStage(object):
                 'tags': resource.tags,
                 'timeout': resource.timeout,
                 'memory_size': resource.memory_size,
+                'ephemeral_storage': resource.ephemeral_storage,
                 'security_group_ids': resource.security_group_ids,
                 'subnet_ids': resource.subnet_ids,
                 'layers': layers
