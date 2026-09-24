@@ -610,6 +610,11 @@ def test_can_match_exact_route(actual_url, matched_url):
             matcher.match_route(actual_url)
 
 
+def test_does_not_capture_params_from_unmatched_routes():
+    matcher = local.RouteMatcher(['/{x}/c', '/{y}/d'])
+    assert matcher.match_route('/foo/d').captured == {'y': 'foo'}
+
+
 def test_lambda_event_contains_source_ip():
     converter = local.LambdaEventConverter(
         local.RouteMatcher(['/foo/bar']))
