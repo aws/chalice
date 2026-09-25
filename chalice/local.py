@@ -383,7 +383,12 @@ class LocalGatewayAuthorizer(object):
             if statement.get('Effect') == 'Allow' and \
                     (statement.get('Action') == 'execute-api:Invoke' or
                      'execute-api:Invoke' in statement.get('Action')):
-                for resource in statement.get('Resource'):
+                resources = statement.get('Resource')
+                # A policy statement can have a single resource string
+                # instead of a list of resources.
+                if isinstance(resources, str):
+                    resources = [resources]
+                for resource in resources:
                     allow_resource_statements.append(resource)
 
         arn_matcher = ARNMatcher(arn)
