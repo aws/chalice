@@ -68,6 +68,7 @@ class TestApplicationGraphBuilder(object):
                       api_gateway_custom_domain=None,
                       websocket_api_custom_domain=None,
                       log_retention_in_days=None,
+                      lambda_alias=None,
                       project_dir='.'):
         kwargs = {
             'chalice_app': app,
@@ -102,6 +103,8 @@ class TestApplicationGraphBuilder(object):
             kwargs['reserved_concurrency'] = reserved_concurrency
         if log_retention_in_days is not None:
             kwargs['log_retention_in_days'] = log_retention_in_days
+        if lambda_alias is not None:
+            kwargs['lambda_alias'] = lambda_alias
         kwargs['layers'] = layers
         config = Config.create(**kwargs)
         return config
@@ -381,6 +384,17 @@ class TestApplicationGraphBuilder(object):
             reserved_concurrency=5,
             xray=None,
         )
+
+    def test_can_build_lambda_function_with_alias(
+            self, sample_app_lambda_only):
+        builder = ApplicationGraphBuilder()
+        config = self.create_config(sample_app_lambda_only,
+                                    automatic_layer=False,
+                                    iam_role_arn='role:arn',
+                                    lambda_alias='live')
+        application = builder.build(config, stage_name='dev')
+        function = application.resources[0]
+        assert function.lambda_alias == 'live'
 
     def test_multiple_lambda_functions_share_role_and_package(
             self, sample_app_lambda_only):
