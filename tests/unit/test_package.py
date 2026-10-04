@@ -484,7 +484,7 @@ class TestTerraformTemplate(TemplateTestBase):
         rule = template['resource'][
             'aws_cloudwatch_event_rule'][event.resource_name]
         assert rule == {
-            'name': event.resource_name,
+            'name': event.rule_name,
             'event_pattern': event.event_pattern}
         target = template['resource'][
             'aws_cloudwatch_event_target'][event.resource_name]
@@ -510,10 +510,35 @@ class TestTerraformTemplate(TemplateTestBase):
             'aws_cloudwatch_event_rule'][event.resource_name]
 
         assert rule == {
-            'name': event.resource_name,
+            'name': event.rule_name,
             'schedule_expression': 'rate(5 minutes)',
             'description': 'description',
         }
+
+    @pytest.mark.parametrize('event_type', ['schedule', 'on_cw_event'])
+    def test_event_rule_names_include_app_and_stage(
+            self, sample_app, event_type):
+        expression = ('rate(5 minutes)' if event_type == 'schedule'
+                      else {'source': ['aws.ec2']})
+
+        @getattr(sample_app, event_type)(expression)
+        def process_uploads(event):
+            pass
+
+        rule_names = []
+        for app_name, stage in [('first', 'dev'), ('second', 'dev'),
+                                ('first', 'prod')]:
+            config = Config.create(chalice_app=sample_app,
+                                   project_dir='.', app_name=app_name,
+                                   chalice_stage=stage)
+            template = self.generate_template(config, stage)
+            rules = template['resource']['aws_cloudwatch_event_rule']
+            assert list(rules) == ['process_uploads-event']
+            rule_name = rules['process_uploads-event']['name']
+            assert rule_name == '%s-%s-process_uploads-event' % (
+                app_name, stage)
+            rule_names.append(rule_name)
+        assert len(set(rule_names)) == 3
 
     def test_can_generate_rest_api(self, sample_app_with_auth):
         config = Config.create(chalice_app=sample_app_with_auth,
