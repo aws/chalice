@@ -132,6 +132,7 @@ class TestApplicationGraphBuilder(object):
             security_group_ids=[],
             subnet_ids=[],
             layers=[],
+            architecture='x86_64',
             reserved_concurrency=None,
             managed_layer=None,
             xray=None,
@@ -165,6 +166,7 @@ class TestApplicationGraphBuilder(object):
             security_group_ids=[],
             subnet_ids=[],
             layers=[],
+            architecture='x86_64',
             reserved_concurrency=None,
             managed_layer=None,
             xray=None,
@@ -201,6 +203,7 @@ class TestApplicationGraphBuilder(object):
             security_group_ids=[],
             subnet_ids=[],
             layers=[],
+            architecture='x86_64',
             managed_layer=models.LambdaLayer(
                 resource_name='managed-layer',
                 layer_name='lambda-only-dev-managed-layer',
@@ -257,6 +260,7 @@ class TestApplicationGraphBuilder(object):
             security_group_ids=[],
             subnet_ids=[],
             layers=layers,
+            architecture='x86_64',
             reserved_concurrency=None,
             xray=None,
         )
@@ -316,6 +320,7 @@ class TestApplicationGraphBuilder(object):
             security_group_ids=['sg1', 'sg2'],
             subnet_ids=['sn1', 'sn2'],
             layers=[],
+            architecture='x86_64',
             reserved_concurrency=None,
             xray=None,
         )
@@ -378,6 +383,7 @@ class TestApplicationGraphBuilder(object):
             security_group_ids=[],
             subnet_ids=[],
             layers=[],
+            architecture='x86_64',
             reserved_concurrency=5,
             xray=None,
         )

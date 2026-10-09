@@ -274,6 +274,16 @@ class Config(object):
                                   varies_per_function=True)
 
     @property
+    def lambda_architecture(self) -> str:
+        value = self._chain_lookup(
+            'lambda_architecture',
+            varies_per_chalice_stage=True,
+            varies_per_function=True)
+        if value is None:
+            return 'x86_64'
+        return value
+
+    @property
     def automatic_layer(self) -> bool:
         v = self._chain_lookup('automatic_layer',
                                varies_per_chalice_stage=True,

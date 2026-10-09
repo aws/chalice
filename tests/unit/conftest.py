@@ -245,6 +245,7 @@ def lambda_function():
         security_group_ids=[],
         subnet_ids=[],
         layers=[],
+        architecture='x86_64',
         reserved_concurrency=None,
         xray=None,
     )

@@ -203,6 +203,7 @@ class LambdaFunction(ManagedModel):
     reserved_concurrency: int
     # These are customer created layers.
     layers: List[str]
+    architecture: str
     managed_layer: Opt[LambdaLayer] = None
     log_group: Opt[LogGroup] = None
 
