@@ -451,6 +451,7 @@ class ApplicationGraphBuilder(object):
                 deployment_package=models.DeploymentPackage(
                     models.Placeholder.BUILD_STAGE
                 ),
+                architecture=config.lambda_architecture,
             )
         return self._managed_layer
 
@@ -575,6 +576,7 @@ class ApplicationGraphBuilder(object):
             layers=lambda_layers,
             managed_layer=self._get_managed_lambda_layer(config),
             xray=config.xray_enabled,
+            architecture=config.lambda_architecture,
         )
         self._inject_role_traits(function, role)
         return function

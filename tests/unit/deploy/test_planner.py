@@ -540,7 +540,8 @@ class TestPlanLambdaFunction(BasePlannerTests):
             params={
                 'layer_name': 'bar',
                 'zip_contents': mock.ANY,
-                'runtime': 'python2.7'})
+                'runtime': 'python2.7',
+                'architecture': 'x86_64'})
         ]
         self.assert_apicall_equals(plan[0], expected[0])
         assert list(self.last_plan.messages.values()) == [
@@ -571,7 +572,8 @@ class TestPlanLambdaFunction(BasePlannerTests):
                 params={
                     'layer_name': 'bar',
                     'zip_contents': mock.ANY,
-                    'runtime': 'python2.7'}),
+                    'runtime': 'python2.7',
+                    'architecture': 'x86_64'}),
             models.RecordResourceVariable(
                 resource_type='lambda_layer',
                 resource_name='layer',
@@ -606,6 +608,7 @@ class TestPlanLambdaFunction(BasePlannerTests):
                 'security_group_ids': [],
                 'subnet_ids': [],
                 'layers': [],
+                'architecture': 'x86_64',
             },
         ),
             models.APICall(
@@ -640,7 +643,8 @@ class TestPlanLambdaFunction(BasePlannerTests):
             params={
                 'layer_name': 'bar',
                 'zip_contents': mock.ANY,
-                'runtime': 'python2.7'}
+                'runtime': 'python2.7',
+                'architecture': 'x86_64'}
         ),
             models.APICall(
             method_name='create_function',
@@ -657,7 +661,8 @@ class TestPlanLambdaFunction(BasePlannerTests):
                 'memory_size': 128,
                 'security_group_ids': [],
                 'subnet_ids': [],
-                'layers': [Variable('layer_version_arn')] + layers
+                'layers': [Variable('layer_version_arn')] + layers,
+                'architecture': 'x86_64',
             },
         ),
             models.APICall(
@@ -693,6 +698,7 @@ class TestPlanLambdaFunction(BasePlannerTests):
             'security_group_ids': [],
             'subnet_ids': [],
             'layers': [],
+            'architecture': 'x86_64',
         }
         expected_params = dict(memory_size=256, **existing_params)
         expected = [models.APICall(
@@ -758,6 +764,7 @@ class TestPlanLambdaFunction(BasePlannerTests):
                 'security_group_ids': [],
                 'subnet_ids': [],
                 'layers': [],
+                'architecture': 'x86_64',
             },
         ),
             models.APICall(

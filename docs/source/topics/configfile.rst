@@ -134,6 +134,18 @@ See :ref:`iam-role-pol-examples` for examples of how to configure IAM roles
 and policies.
 
 
+``lambda_architecture``
+~~~~~~~~~~~~~~~~~~~~~~~
+
+The instruction set architecture of your Lambda functions and automatic
+layer.  Valid values are ``x86_64`` and ``arm64``.  The default
+``lambda_architecture`` is ``x86_64``.  This value can be set globally or per
+stage, but not per function.  When set to ``arm64``, Chalice will package
+``manylinux`` wheel files built for ``aarch64``.  See
+:ref:`package-3rd-party` for more information on how third party packages are
+handled.
+
+
 ``lambda_memory_size``
 ~~~~~~~~~~~~~~~~~~~~~~
 

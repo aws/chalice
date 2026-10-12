@@ -180,6 +180,7 @@ class LambdaLayer(ManagedModel):
     runtime: str
     deployment_package: DeploymentPackage
     is_empty: bool = False
+    architecture: str = 'x86_64'
 
     def dependencies(self) -> List[Model]:
         return [self.deployment_package]
@@ -205,6 +206,7 @@ class LambdaFunction(ManagedModel):
     layers: List[str]
     managed_layer: Opt[LambdaLayer] = None
     log_group: Opt[LogGroup] = None
+    architecture: str = 'x86_64'
 
     def dependencies(self) -> List[Model]:
         resources: List[Model] = []

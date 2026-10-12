@@ -292,7 +292,8 @@ def create_build_stage(osutils, ui, swagger_gen, config):
                            osutils=osutils)
     dependency_builder = PipDependencyBuilder(
         osutils=osutils,
-        pip_runner=pip_runner
+        pip_runner=pip_runner,
+        architecture=config.lambda_architecture,
     )
     deployment_packager = cast(BaseDeployStep, None)
     if config.automatic_layer:
@@ -301,11 +302,13 @@ def create_build_stage(osutils, ui, swagger_gen, config):
                 osutils=osutils,
                 dependency_builder=dependency_builder,
                 ui=ui,
+                architecture=config.lambda_architecture,
             ),
             layer_packager=LayerDeploymentPackager(
                 osutils=osutils,
                 dependency_builder=dependency_builder,
                 ui=ui,
+                architecture=config.lambda_architecture,
             )
         )
     else:
@@ -314,6 +317,7 @@ def create_build_stage(osutils, ui, swagger_gen, config):
                 osutils=osutils,
                 dependency_builder=dependency_builder,
                 ui=ui,
+                architecture=config.lambda_architecture,
             )
         )
     build_stage = BuildStage(

@@ -1,0 +1,5 @@
+{
+  "type": "feature",
+  "category": "Lambda",
+  "description": "Add `lambda_architecture` config option to deploy Lambda functions and layers on `arm64` ([#1808](https://github.com/aws/chalice/issues/1808))"
+}

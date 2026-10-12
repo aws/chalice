@@ -439,6 +439,7 @@ class TestTerraformTemplate(TemplateTestBase):
         assert template['resource']['aws_lambda_layer_version']['layer'] == {
             'layer_name': 'bar',
             'compatible_runtimes': ['python2.7'],
+            'compatible_architectures': ['x86_64'],
             'filename': 'layer.zip',
         }
 
@@ -448,6 +449,13 @@ class TestTerraformTemplate(TemplateTestBase):
         template = self.template_gen.generate([function])
         tf_resource = self.get_function(template)
         assert tf_resource['reserved_concurrent_executions'] == 5
+
+    def test_adds_architecture_when_provided(self, sample_app):
+        function = self.lambda_function()
+        function.architecture = 'arm64'
+        template = self.template_gen.generate([function])
+        tf_resource = self.get_function(template)
+        assert tf_resource['architectures'] == ['arm64']
 
     def test_adds_log_group_resource_when_configured(self, sample_app):
         function = self.lambda_function()
@@ -1126,6 +1134,7 @@ class TestSAMTemplate(TemplateTestBase):
             'Type': 'AWS::Serverless::LayerVersion',
             'Properties': {
                 'CompatibleRuntimes': [config.lambda_python_version],
+                'CompatibleArchitectures': ['x86_64'],
                 'LayerName': 'testapp-dev-managed-layer',
                 'ContentUri': models.Placeholder.BUILD_STAGE,
             }
@@ -1156,6 +1165,7 @@ class TestSAMTemplate(TemplateTestBase):
             'Type': 'AWS::Serverless::LayerVersion',
             'Properties': {
                 'CompatibleRuntimes': [config.lambda_python_version],
+                'CompatibleArchitectures': ['x86_64'],
                 'LayerName': 'testapp-dev-managed-layer',
                 'ContentUri': models.Placeholder.BUILD_STAGE,
             }
@@ -1207,6 +1217,7 @@ class TestSAMTemplate(TemplateTestBase):
                 'CodeUri': 'foo.zip',
                 'Handler': 'app.app',
                 'MemorySize': 128,
+                'Architectures': ['x86_64'],
                 'Tracing': 'PassThrough',
                 'Role': {'Fn::GetAtt': ['Role', 'Arn']},
                 'Runtime': 'python27',
@@ -1243,6 +1254,13 @@ class TestSAMTemplate(TemplateTestBase):
         template = self.template_gen.generate([function])
         cfn_resource = list(template['Resources'].values())[0]
         assert cfn_resource['Properties']['ReservedConcurrentExecutions'] == 5
+
+    def test_adds_architecture_when_provided(self, sample_app):
+        function = self.lambda_function()
+        function.architecture = 'arm64'
+        template = self.template_gen.generate([function])
+        cfn_resource = list(template['Resources'].values())[0]
+        assert cfn_resource['Properties']['Architectures'] == ['arm64']
 
     def test_adds_log_group_resource_when_configured(self, sample_app):
         function = self.lambda_function()
@@ -1304,6 +1322,7 @@ class TestSAMTemplate(TemplateTestBase):
                 'CodeUri': 'foo.zip',
                 'Handler': 'app.app',
                 'MemorySize': 128,
+                'Architectures': ['x86_64'],
                 'Role': 'role:arn',
                 'Tracing': 'PassThrough',
                 'Runtime': 'python27',
