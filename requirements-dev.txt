@@ -46,7 +46,7 @@ hypothesis==6.152.4
     # via -r requirements-test.in
 idna==3.13
     # via requests
-imagesize==2.0.0
+imagesize==2.0.1
     # via sphinx
 iniconfig==2.3.0
     # via pytest
