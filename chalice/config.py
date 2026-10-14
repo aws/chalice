@@ -150,11 +150,11 @@ class Config(object):
         major, minor = sys.version_info[0], sys.version_info[1]
         if (major, minor) < (3, 10):
             return 'python3.10'
-        elif (major, minor) <= (3, 13):
+        elif (major, minor) <= (3, 14):
             # Otherwise we use your current version of python if Lambda
             # supports it.
             return f'python{major}.{minor}'
-        return 'python3.14'
+        return 'python3.15'
 
     @property
     def log_retention_in_days(self) -> int:

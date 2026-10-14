@@ -81,6 +81,7 @@ class BaseLambdaDeploymentPackager(object):
         'python3.12': 'cp312',
         'python3.13': 'cp313',
         'python3.14': 'cp314',
+        'python3.15': 'cp315',
     }
 
     def __init__(
@@ -501,6 +502,7 @@ class DependencyBuilder(object):
         'cp312': (2, 34),
         'cp313': (2, 34),
         'cp314': (2, 34),
+        'cp315': (2, 34),
     }
     # Fallback version if we're on an unknown python version
     # not in _RUNTIME_GLIBC.

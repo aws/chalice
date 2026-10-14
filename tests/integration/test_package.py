@@ -18,14 +18,25 @@ from chalice.deploy.packager import NoSuchPackageError
 
 PY_VERSION = sys.version_info[:2]
 PY314_OR_LATER = PY_VERSION >= (3, 14)
+PY315_OR_LATER = PY_VERSION >= (3, 15)
 # Keep these smoke-test pins compatible with every Python version in the
-# current CI matrix. Some projects dropped Python 3.10 support before adding
-# cp314 wheels, so those packages need Python-version-specific pins.
-NUMPY_VERSION = '2.3.4' if PY314_OR_LATER else '2.2.6'
-PANDAS_VERSION = '2.3.3'
-SQLALCHEMY_VERSION = '2.0.49'
-SCIPY_VERSION = '1.17.1' if PY314_OR_LATER else '1.15.3'
-CFFI_VERSION = '2.0.0'
+# current CI matrix. Some projects dropped older Python support before adding
+# cp314/cp315 wheels, so those packages need Python-version-specific pins.
+if PY315_OR_LATER:
+    NUMPY_VERSION = '2.5.2'
+elif PY314_OR_LATER:
+    NUMPY_VERSION = '2.3.4'
+else:
+    NUMPY_VERSION = '2.2.6'
+PANDAS_VERSION = '3.0.6' if PY315_OR_LATER else '2.3.3'
+SQLALCHEMY_VERSION = '2.1.0' if PY315_OR_LATER else '2.0.49'
+if PY315_OR_LATER:
+    SCIPY_VERSION = '1.18.1'
+elif PY314_OR_LATER:
+    SCIPY_VERSION = '1.17.1'
+else:
+    SCIPY_VERSION = '1.15.3'
+CFFI_VERSION = '2.1.0' if PY315_OR_LATER else '2.0.0'
 PYGIT2_VERSION = '1.19.2' if PY314_OR_LATER else '1.17.0'
 PACKAGES_TO_TEST = {
     'pandas': {
@@ -74,7 +85,8 @@ PACKAGES_TO_TEST = {
         'dependencies': ['numpy==%s' % NUMPY_VERSION],
         'contents': [
             'scipy/__init__.py',
-            'scipy/cluster/_hierarchy.cpython-*-x86_64-linux-gnu.so'
+            # scipy 1.18 moved this into scipy/cluster/hierarchy/.
+            'scipy/cluster/*_hierarchy.cpython-*-x86_64-linux-gnu.so'
         ],
     },
     'cffi': {
@@ -83,6 +95,10 @@ PACKAGES_TO_TEST = {
     },
     'pygit2': {
         'version': PYGIT2_VERSION,
+        'skip_reason': (
+            'pygit2 does not publish cp315 wheels yet'
+            if PY315_OR_LATER else None
+        ),
         'contents': ['pygit2/_pygit2.cpython-*-x86_64-linux-gnu.so'],
     },
     'pyrsistent': {
@@ -124,8 +140,12 @@ def _get_package_install_test_cases():
     for package, config in PACKAGES_TO_TEST.items():
         package_version = f'{package}=={config["version"]}'
         requirements = [package_version] + config.get('dependencies', [])
+        marks = []
+        if config.get('skip_reason'):
+            marks.append(pytest.mark.skip(reason=config['skip_reason']))
         testcases.append(
-            pytest.param(requirements, config['contents'], id=package_version)
+            pytest.param(requirements, config['contents'], id=package_version,
+                         marks=marks)
         )
     return testcases
 
