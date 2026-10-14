@@ -20,6 +20,7 @@ from chalice.compat import pip_no_compile_c_shim
 from chalice.utils import OSUtils
 from chalice.utils import UI  # noqa
 from chalice.constants import MISSING_DEPENDENCIES_TEMPLATE
+from chalice.constants import DEFAULT_LAMBDA_ARCHITECTURE
 
 import chalice
 from chalice import app
@@ -88,7 +89,7 @@ class BaseLambdaDeploymentPackager(object):
         osutils: OSUtils,
         dependency_builder: DependencyBuilder,
         ui: UI,
-        architecture: str = 'x86_64',
+        architecture: str = DEFAULT_LAMBDA_ARCHITECTURE,
     ) -> None:
         self._osutils = osutils
         self._dependency_builder = dependency_builder
@@ -135,7 +136,7 @@ class BaseLambdaDeploymentPackager(object):
 
     def _architecture_suffix(self) -> str:
         # x86_64 has no suffix so existing cached packages are reused.
-        if self._architecture == 'x86_64':
+        if self._architecture == DEFAULT_LAMBDA_ARCHITECTURE:
             return ''
         return '-%s' % self._architecture
 
@@ -537,15 +538,13 @@ class DependencyBuilder(object):
         self,
         osutils: OSUtils,
         pip_runner: Optional[PipRunner] = None,
-        architecture: str = 'x86_64',
+        architecture: str = DEFAULT_LAMBDA_ARCHITECTURE,
     ) -> None:
         self._osutils = osutils
         if pip_runner is None:
             pip_runner = PipRunner(SubprocessPip(osutils))
         self._pip = pip_runner
-        self._machine = self._ARCHITECTURE_TO_MACHINE.get(
-            architecture, architecture
-        )
+        self._machine = self._ARCHITECTURE_TO_MACHINE[architecture]
 
     def _is_compatible_wheel_filename(
         self, expected_abi: str, filename: str
