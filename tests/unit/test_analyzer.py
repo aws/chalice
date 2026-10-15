@@ -409,6 +409,62 @@ def test_does_not_reuse_function_params_across_calls():
     """) == {'dynamodb': set(['list_tables'])}
 
 
+def test_reinfers_nested_parameterized_function_calls():
+    assert aws_calls("""\
+        import boto3
+        service_name = 'dynamodb'
+        def create_client(service_name):
+            return boto3.client(service_name)
+        def get_client(service_name):
+            return create_client(service_name)
+        get_client(service_name).list_tables()
+        get_client(service_name).delete_table(TableName='name')
+    """) == {'dynamodb': set(['list_tables', 'delete_table'])}
+
+
+def test_nested_helpers_do_not_share_return_types():
+    assert aws_calls("""\
+        import boto3
+        ddb_service = 'dynamodb'
+        lambda_service = 'lambda'
+        def create_client(service_name):
+            return boto3.client(service_name)
+        def get_client(service_name):
+            return create_client(service_name)
+        get_client(ddb_service).list_tables()
+        get_client(lambda_service).list_functions()
+    """) == {
+        'dynamodb': set(['list_tables']),
+        'lambda': set(['list_functions']),
+    }
+
+
+def test_unresolved_function_call_does_not_discard_api_calls():
+    assert aws_calls("""\
+        import boto3
+        service_name = 'dynamodb'
+        def make_call(service_name):
+            boto3.client(service_name).list_tables()
+        make_call(service_name)
+        make_call(unknown())
+    """) == {'dynamodb': set(['list_tables'])}
+
+
+def test_accumulates_api_calls_for_reused_function_body():
+    assert aws_calls("""\
+        import boto3
+        ddb_service = 'dynamodb'
+        lambda_service = 'lambda'
+        def tag_resource(service_name):
+            boto3.client(service_name).tag_resource()
+        tag_resource(ddb_service)
+        tag_resource(lambda_service)
+    """) == {
+        'dynamodb': set(['tag_resource']),
+        'lambda': set(['tag_resource']),
+    }
+
+
 def test_can_understand_shadowed_vars_from_func_arg():
     assert aws_calls("""\
         import boto3

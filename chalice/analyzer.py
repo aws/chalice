@@ -43,6 +43,7 @@ APICallT = Dict[str, Set[str]]
 OptASTSet = Optional[Set[ast.AST]]
 ComprehensionNode = Union[ast.DictComp, ast.GeneratorExp, ast.ListComp]
 FunctionParamTypes = List[Tuple[str, Any]]
+NodeAPICalls = Dict[ast.AST, Set[Tuple[str, str]]]
 
 
 def get_client_calls(source_code):
@@ -226,10 +227,9 @@ class APICallCollector(ast.NodeVisitor):
 
     def visit(self, node):
         # type: (ast.AST) -> None
-        inferred_type = self._binder.get_type_for_node(node)
-        if isinstance(inferred_type, Boto3ClientMethodCallType):
-            self.api_calls.setdefault(inferred_type.service_name, set()).add(
-                inferred_type.method_name)
+        api_calls = self._binder.get_api_calls_for_node(node)
+        for service_name, method_name in api_calls:
+            self.api_calls.setdefault(service_name, set()).add(method_name)
         ast.NodeVisitor.visit(self, node)
 
 
@@ -329,14 +329,22 @@ class TypeBinder(object):
     def __init__(self):
         # type: () -> None
         self._node_to_type = {}  # type: Dict[ast.AST, Any]
+        self._node_to_api_calls = {}  # type: NodeAPICalls
 
     def get_type_for_node(self, node):
         # type: (Any) -> Any
         return self._node_to_type.get(node)
 
+    def get_api_calls_for_node(self, node):
+        # type: (ast.AST) -> Set[Tuple[str, str]]
+        return self._node_to_api_calls.get(node, set())
+
     def set_type_for_node(self, node, inferred_type):
         # type: (Any, Any) -> None
         self._node_to_type[node] = inferred_type
+        if isinstance(inferred_type, Boto3ClientMethodCallType):
+            self._node_to_api_calls.setdefault(node, set()).add(
+                (inferred_type.service_name, inferred_type.method_name))
 
 
 class SymbolTableTypeInfer(ast.NodeVisitor):
@@ -490,8 +498,14 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
         elif isinstance(node.func, ast.Name) and \
                 self._symbol_table.has_ast_node_for_symbol(node.func.id):
             if node not in self._visited:
+                # Track calls currently being inferred to prevent recursion.
+                # Remove completed calls so parameterized functions can be
+                # inferred again.
                 self._visited.add(node)
-                self._infer_function_call(node)
+                try:
+                    self._infer_function_call(node)
+                finally:
+                    self._visited.remove(node)
 
     def visit_Lambda(self, node):
         # type: (ast.Lambda) -> None
