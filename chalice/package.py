@@ -25,6 +25,7 @@ from chalice.deploy import models
 from chalice.deploy.appgraph import ApplicationGraphBuilder, DependencyBuilder
 from chalice.deploy.deployer import BuildStage  # noqa
 from chalice.deploy.deployer import create_build_stage
+from chalice.deploy.validate import validate_resource_policy
 
 
 def create_app_packager(
@@ -1478,6 +1479,7 @@ class AppPackager(object):
     def package_app(self, config, outdir, chalice_stage_name):
         # type: (Config, str, str) -> None
         # Deployment package
+        validate_resource_policy(config)
         resources = self._resource_builder.construct_resources(
             config, chalice_stage_name)
 
