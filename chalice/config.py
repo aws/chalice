@@ -8,6 +8,7 @@ from chalice import __version__ as current_chalice_version
 from chalice.app import Chalice  # noqa
 from chalice.constants import DEFAULT_STAGE_NAME
 from chalice.constants import DEFAULT_HANDLER_NAME
+from chalice.constants import DEFAULT_LAMBDA_ARCHITECTURE
 
 
 StrMap = Dict[str, Any]
@@ -155,6 +156,14 @@ class Config(object):
             # supports it.
             return f'python{major}.{minor}'
         return 'python3.15'
+
+    @property
+    def lambda_architecture(self) -> str:
+        v = self._chain_lookup('lambda_architecture',
+                               varies_per_chalice_stage=True)
+        if v is None:
+            return DEFAULT_LAMBDA_ARCHITECTURE
+        return v
 
     @property
     def log_retention_in_days(self) -> int:

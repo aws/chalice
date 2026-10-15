@@ -371,6 +371,37 @@ def test_zip_filename_changes_on_vendor_symlink(tmpdir, chalice_deployer):
     assert first != second
 
 
+def test_zip_filename_includes_non_default_architecture(tmpdir,
+                                                        chalice_deployer):
+    appdir = _create_app_structure(tmpdir)
+    arm_deployer = chalice.deploy.packager.LambdaDeploymentPackager(
+        osutils=chalice.utils.OSUtils(),
+        dependency_builder=mock.Mock(spec=DependencyBuilder),
+        ui=chalice.utils.UI(),
+        architecture='arm64',
+    )
+    x86_name = chalice_deployer.deployment_package_filename(
+        str(appdir), 'python3.12')
+    arm_name = arm_deployer.deployment_package_filename(
+        str(appdir), 'python3.12')
+    assert x86_name.endswith('-python3.12.zip')
+    assert arm_name.endswith('-python3.12-arm64.zip')
+
+
+def test_layer_filename_includes_non_default_architecture(tmpdir):
+    appdir = _create_app_structure(tmpdir)
+    arm_packager = chalice.deploy.packager.LayerDeploymentPackager(
+        osutils=chalice.utils.OSUtils(),
+        dependency_builder=mock.Mock(spec=DependencyBuilder),
+        ui=chalice.utils.UI(),
+        architecture='arm64',
+    )
+    name = arm_packager.deployment_package_filename(
+        str(appdir), 'python3.12')
+    assert os.path.basename(name).startswith('managed-layer-')
+    assert name.endswith('-python3.12-arm64.zip')
+
+
 @slow
 def test_chalice_runtime_injected_on_change(tmpdir, chalice_deployer):
     appdir = _create_app_structure(tmpdir)

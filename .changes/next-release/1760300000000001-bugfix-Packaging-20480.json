@@ -1,0 +1,5 @@
+{
+  "type": "bugfix",
+  "category": "Packaging",
+  "description": "Do not package wheel files built for a different CPU architecture than the Lambda function ([#2048](https://github.com/aws/chalice/issues/2048))"
+}

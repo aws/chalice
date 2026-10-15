@@ -194,6 +194,7 @@ class SAMTemplateGenerator(TemplateGenerator):
             "Type": "AWS::Serverless::LayerVersion",
             "Properties": {
                 "CompatibleRuntimes": [resource.runtime],
+                "CompatibleArchitectures": [resource.architecture],
                 "ContentUri": resource.deployment_package.filename,
                 "LayerName": resource.layer_name
             }
@@ -248,6 +249,7 @@ class SAMTemplateGenerator(TemplateGenerator):
                 'Tracing': resource.xray and 'Active' or 'PassThrough',
                 'Timeout': resource.timeout,
                 'MemorySize': resource.memory_size,
+                'Architectures': [resource.architecture],
             },
         }  # type: Dict[str, Any]
 
@@ -828,7 +830,7 @@ class TerraformGenerator(TemplateGenerator):
             'terraform': {
                 'required_version': '>= 0.12.26, < 1.4.0',
                 'required_providers': {
-                    'aws': {'version': '>= 2, < 5'},
+                    'aws': {'version': '>= 3.61.0, < 5'},
                     'null': {'version': '>= 2, < 4'}
                 }
             },
@@ -1245,6 +1247,7 @@ class TerraformGenerator(TemplateGenerator):
                 resource.resource_name] = {
                     'layer_name': resource.layer_name,
                     'compatible_runtimes': [resource.runtime],
+                    'compatible_architectures': [resource.architecture],
                     'filename': resource.deployment_package.filename,
         }
         self._chalice_layer = resource.resource_name
@@ -1256,6 +1259,7 @@ class TerraformGenerator(TemplateGenerator):
             'runtime': resource.runtime,
             'handler': resource.handler,
             'memory_size': resource.memory_size,
+            'architectures': [resource.architecture],
             'tags': resource.tags,
             'timeout': resource.timeout,
             'source_code_hash': '${filebase64sha256("%s")}' % (
