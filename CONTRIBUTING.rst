@@ -153,14 +153,8 @@ and `pep 526 <https://www.python.org/dev/peps/pep-0526/>`__.
 All chalice code must have type hints added or else the
 CI build will fail.  To check types you can run ``make typecheck``.
 
-Chalice supports python2 as well as python3.  Because of
-the requirement of supporting python2, function annotations
-are not allowed for specifying type hints, you must use
-type comments as outlined in pep 484.
-
-Keep in mind that ``mypy`` only runs in python3, so you'll need
-to either use python3 when developing features or have mypy
-globally installed.
+Chalice no longer supports Python 2, so function annotations
+may be used for type hints.
 
 PRCheck
 -------
