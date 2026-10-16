@@ -1870,11 +1870,27 @@ class TypedAWSClient(object):
             }
         if starting_position is not None:
             kwargs['StartingPosition'] = starting_position
-        return self._call_client_method_with_retries(
-            lambda_client.create_event_source_mapping,
-            kwargs,
-            max_attempts=self.LAMBDA_CREATE_ATTEMPTS,
-        )['UUID']
+        try:
+            return self._call_client_method_with_retries(
+                lambda_client.create_event_source_mapping,
+                kwargs,
+                max_attempts=self.LAMBDA_CREATE_ATTEMPTS,
+            )['UUID']
+        except lambda_client.exceptions.ResourceConflictException:
+            # A mapping for this event source and function already exists,
+            # e.g. because the local deployed state was lost.  Reuse it
+            # rather than failing the deployment.
+            existing = lambda_client.list_event_source_mappings(
+                EventSourceArn=event_source_arn,
+                FunctionName=function_name,
+            )['EventSourceMappings']
+            if not existing:
+                raise
+            event_uuid = existing[0]['UUID']
+            self.update_lambda_event_source(
+                event_uuid, batch_size, maximum_batching_window_in_seconds,
+                maximum_concurrency)
+            return event_uuid
 
     def update_lambda_event_source(
         self,
