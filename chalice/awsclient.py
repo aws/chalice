@@ -919,6 +919,7 @@ class TypedAWSClient(object):
         security_group_ids: OptStrList = None,
         layers: OptStrList = None,
         architecture: OptStr = None,
+        handler: OptStr = None,
     ) -> Dict[str, Any]:
         """Update a Lambda function's code and configuration.
 
@@ -926,6 +927,8 @@ class TypedAWSClient(object):
         is not provided, no changes will be made for that that parameter on
         the targeted lambda function.
         """
+        # Configuration options mirror Lambda's update API.
+        # pylint: disable=too-many-locals
         return_value = self._update_function_code(
             function_name=function_name,
             zip_contents=zip_contents,
@@ -942,6 +945,7 @@ class TypedAWSClient(object):
             security_group_ids=security_group_ids,
             function_name=function_name,
             layers=layers,
+            handler=handler,
         )
         if tags is not None:
             self._update_function_tags(return_value['FunctionArn'], tags)
@@ -1001,18 +1005,19 @@ class TypedAWSClient(object):
         function_name: str,
         layers: OptStrList,
         xray: Optional[bool],
+        handler: OptStr = None,
     ) -> None:
-        kwargs: Dict[str, Any] = {}
+        kwargs: Dict[str, Any] = {
+            key: value for key, value in (
+                ('Handler', handler),
+                ('Runtime', runtime),
+                ('Timeout', timeout),
+                ('MemorySize', memory_size),
+                ('Role', role_arn),
+            ) if value is not None
+        }
         if environment_variables is not None:
             kwargs['Environment'] = {'Variables': environment_variables}
-        if runtime is not None:
-            kwargs['Runtime'] = runtime
-        if timeout is not None:
-            kwargs['Timeout'] = timeout
-        if memory_size is not None:
-            kwargs['MemorySize'] = memory_size
-        if role_arn is not None:
-            kwargs['Role'] = role_arn
         if xray:
             kwargs['TracingConfig'] = {'Mode': 'Active'}
         if security_group_ids is not None and subnet_ids is not None:
