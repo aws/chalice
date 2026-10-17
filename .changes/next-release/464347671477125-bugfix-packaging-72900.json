@@ -1,0 +1,5 @@
+{
+  "type": "bugfix",
+  "category": "packaging",
+  "description": "Validate private API resource policy configuration in ``chalice package``."
+}

@@ -442,6 +442,42 @@ class TestConfigureLambdaMemorySize(object):
         assert c.lambda_memory_size == 256
 
 
+class TestConfigureLambdaArchitecture(object):
+    def test_not_set(self):
+        c = Config('dev', config_from_disk={})
+        assert c.lambda_architecture == 'x86_64'
+
+    def test_set_lambda_architecture_global(self):
+        config_from_disk = {
+            'lambda_architecture': 'arm64'
+        }
+        c = Config('dev', config_from_disk=config_from_disk)
+        assert c.lambda_architecture == 'arm64'
+
+    def test_set_lambda_architecture_stage(self):
+        config_from_disk = {
+            'stages': {
+                'dev': {
+                    'lambda_architecture': 'arm64'
+                }
+            }
+        }
+        c = Config('dev', config_from_disk=config_from_disk)
+        assert c.lambda_architecture == 'arm64'
+
+    def test_set_lambda_architecture_override(self):
+        config_from_disk = {
+            'lambda_architecture': 'x86_64',
+            'stages': {
+                'dev': {
+                    'lambda_architecture': 'arm64'
+                }
+            }
+        }
+        c = Config('dev', config_from_disk=config_from_disk)
+        assert c.lambda_architecture == 'arm64'
+
+
 class TestConfigureLambdaTimeout(object):
     def test_not_set(self):
         c = Config('dev', config_from_disk={})

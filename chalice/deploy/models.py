@@ -5,6 +5,8 @@ import enum
 from typing import List, Dict, Optional as Opt, Any, TypeVar, Union, Set  # noqa
 from typing import cast
 
+from chalice.constants import DEFAULT_LAMBDA_ARCHITECTURE
+
 
 class Placeholder(enum.Enum):
     BUILD_STAGE = 'build_stage'
@@ -180,6 +182,7 @@ class LambdaLayer(ManagedModel):
     runtime: str
     deployment_package: DeploymentPackage
     is_empty: bool = False
+    architecture: str = DEFAULT_LAMBDA_ARCHITECTURE
 
     def dependencies(self) -> List[Model]:
         return [self.deployment_package]
@@ -205,6 +208,7 @@ class LambdaFunction(ManagedModel):
     layers: List[str]
     managed_layer: Opt[LambdaLayer] = None
     log_group: Opt[LogGroup] = None
+    architecture: str = DEFAULT_LAMBDA_ARCHITECTURE
 
     def dependencies(self) -> List[Model]:
         resources: List[Model] = []

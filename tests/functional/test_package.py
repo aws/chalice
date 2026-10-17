@@ -761,6 +761,67 @@ class TestDependencyBuilder(object):
         for req in reqs:
             assert req in installed_packages
 
+    def test_does_fail_on_whl_for_other_architecture(self, tmpdir, osutils,
+                                                     pip_runner):
+        reqs = ['baz']
+        pip, runner = pip_runner
+        appdir, builder = self._make_appdir_and_dependency_builder(
+            reqs, tmpdir, runner)
+        requirements_file = os.path.join(appdir, 'requirements.txt')
+        pip.packages_to_download(
+            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            packages=[
+                'baz-1.5-cp36-cp36m-manylinux2014_aarch64.whl'
+            ]
+        )
+
+        site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
+        with pytest.raises(MissingDependencyError) as e:
+            builder.build_site_packages(
+                'cp36m', requirements_file, site_packages)
+        installed_packages = os.listdir(site_packages)
+
+        missing_packages = list(e.value.missing)
+        pip.validate()
+        assert len(missing_packages) == 1
+        assert missing_packages[0].identifier == 'baz==1.5'
+        assert len(installed_packages) == 0
+
+    def test_can_replace_incompat_whl_for_arm64(self, tmpdir, osutils,
+                                                pip_runner):
+        reqs = ['foo', 'bar']
+        pip, runner = pip_runner
+        appdir = str(_create_app_structure(tmpdir))
+        self._write_requirements_txt(reqs, appdir)
+        builder = DependencyBuilder(OSUtils(), runner, architecture='arm64')
+        requirements_file = os.path.join(appdir, 'requirements.txt')
+        pip.packages_to_download(
+            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            packages=[
+                'foo-1.0-cp36-none-any.whl',
+                'bar-1.2-cp36-cp36m-manylinux1_x86_64.whl'
+            ]
+        )
+        pip.packages_to_download(
+            expected_args=[
+                '--only-binary=:all:', '--no-deps', '--platform',
+                'manylinux_2_17_aarch64', '--platform',
+                'manylinux2014_aarch64', '--implementation', 'cp',
+                '--abi', 'cp36m', '--dest', mock.ANY,
+                'bar==1.2'
+            ],
+            packages=[
+                'bar-1.2-cp36-cp36m-manylinux2014_aarch64.whl'
+            ]
+        )
+        site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
+        builder.build_site_packages('cp36m', requirements_file, site_packages)
+        installed_packages = os.listdir(site_packages)
+
+        pip.validate()
+        for req in reqs:
+            assert req in installed_packages
+
     @pytest.mark.parametrize(
         'package,package_filename', [
             # package: The name you would provide in requirements.txt
@@ -992,6 +1053,25 @@ def test_can_create_app_packager_with_no_autogen(tmpdir, stubbed_session):
     contents = os.listdir(str(outdir))
     assert 'deployment.zip' in contents
     assert 'sam.json' in contents
+
+
+def test_package_rejects_private_api_without_policy(tmpdir, stubbed_session):
+    appdir = _create_app_structure(tmpdir)
+    outdir = tmpdir.mkdir('outdir')
+    config = Config.create(
+        project_dir=str(appdir),
+        chalice_app=sample_app(),
+        autogen_policy=True,
+        api_gateway_endpoint_type='PRIVATE',
+    )
+    options = PackageOptions(TypedAWSClient(session=stubbed_session))
+    p = package.create_app_packager(config, options)
+
+    with pytest.raises(ValueError) as e:
+        p.package_app(config, str(outdir), 'dev')
+
+    assert 'api_gateway_policy_file' in str(e.value)
+    assert 'api_gateway_endpoint_vpce' in str(e.value)
 
 
 def test_can_create_app_packager_with_yaml_extension(tmpdir, stubbed_session):

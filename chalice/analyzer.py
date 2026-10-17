@@ -36,12 +36,14 @@ particular ``FunctionDef`` node.
 import ast
 import symtable
 
-from typing import Dict, Set, Any, Optional, List, Union, cast  # noqa
+from typing import Dict, Set, Any, Optional, List, Tuple, Union, cast  # noqa
 
 
 APICallT = Dict[str, Set[str]]
 OptASTSet = Optional[Set[ast.AST]]
 ComprehensionNode = Union[ast.DictComp, ast.GeneratorExp, ast.ListComp]
+FunctionParamTypes = List[Tuple[str, Any]]
+NodeAPICalls = Dict[ast.AST, Set[Tuple[str, str]]]
 
 
 def get_client_calls(source_code):
@@ -225,10 +227,9 @@ class APICallCollector(ast.NodeVisitor):
 
     def visit(self, node):
         # type: (ast.AST) -> None
-        inferred_type = self._binder.get_type_for_node(node)
-        if isinstance(inferred_type, Boto3ClientMethodCallType):
-            self.api_calls.setdefault(inferred_type.service_name, set()).add(
-                inferred_type.method_name)
+        api_calls = self._binder.get_api_calls_for_node(node)
+        for service_name, method_name in api_calls:
+            self.api_calls.setdefault(service_name, set()).add(method_name)
         ast.NodeVisitor.visit(self, node)
 
 
@@ -328,14 +329,22 @@ class TypeBinder(object):
     def __init__(self):
         # type: () -> None
         self._node_to_type = {}  # type: Dict[ast.AST, Any]
+        self._node_to_api_calls = {}  # type: NodeAPICalls
 
     def get_type_for_node(self, node):
         # type: (Any) -> Any
         return self._node_to_type.get(node)
 
+    def get_api_calls_for_node(self, node):
+        # type: (ast.AST) -> Set[Tuple[str, str]]
+        return self._node_to_api_calls.get(node, set())
+
     def set_type_for_node(self, node, inferred_type):
         # type: (Any, Any) -> None
         self._node_to_type[node] = inferred_type
+        if isinstance(inferred_type, Boto3ClientMethodCallType):
+            self._node_to_api_calls.setdefault(node, set()).add(
+                (inferred_type.service_name, inferred_type.method_name))
 
 
 class SymbolTableTypeInfer(ast.NodeVisitor):
@@ -382,6 +391,10 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
         # type: (Any, Any) -> None
         self._binder.set_type_for_node(node, inferred_type)
 
+    def _clear_inferred_type_for_node(self, node):
+        # type: (Any) -> None
+        self._binder.set_type_for_node(node, None)
+
     def _get_inferred_type_for_node(self, node):
         # type: (Any) -> Any
         return self._binder.get_type_for_node(node)
@@ -411,6 +424,7 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
 
     def visit_Assign(self, node):
         # type: (ast.Assign) -> None
+        self._clear_inferred_type_for_node(node)
         # The LHS gets the inferred type of the RHS.
         # We do this post-traversal to let the type inference
         # run on the children first.
@@ -429,6 +443,7 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
 
     def visit_Attribute(self, node):
         # type: (ast.Attribute) -> None
+        self._clear_inferred_type_for_node(node)
         self.generic_visit(node)
         lhs_inferred_type = self._get_inferred_type_for_node(node.value)
         if lhs_inferred_type is None:
@@ -449,6 +464,7 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
 
     def visit_Call(self, node):
         # type: (ast.Call) -> None
+        self._clear_inferred_type_for_node(node)
         self.generic_visit(node)
         # func -> Node that's being called
         # args -> Arguments being passed.
@@ -482,8 +498,14 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
         elif isinstance(node.func, ast.Name) and \
                 self._symbol_table.has_ast_node_for_symbol(node.func.id):
             if node not in self._visited:
+                # Track calls currently being inferred to prevent recursion.
+                # Remove completed calls so parameterized functions can be
+                # inferred again.
                 self._visited.add(node)
-                self._infer_function_call(node)
+                try:
+                    self._infer_function_call(node)
+                finally:
+                    self._visited.remove(node)
 
     def visit_Lambda(self, node):
         # type: (ast.Lambda) -> None
@@ -509,13 +531,18 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
         ast_node = self._symbol_table.lookup_ast_node_for_symbol(
             function_name)
 
-        self._map_function_params(sub_table, node, ast_node)
-
-        child_infer = self._new_inference_scope(
-            ParsedCode(ast_node, sub_table), self._binder, self._visited)
-        child_infer.bind_types()
-        inferred_func_type = self._get_inferred_type_for_node(ast_node)
-        self._symbol_table.set_inferred_type(function_name, inferred_func_type)
+        mapped_params = self._map_function_params(sub_table, node, ast_node)
+        try:
+            self._clear_inferred_type_for_node(ast_node)
+            child_infer = self._new_inference_scope(
+                ParsedCode(ast_node, sub_table), self._binder, self._visited)
+            child_infer.bind_types()
+            inferred_func_type = self._get_inferred_type_for_node(ast_node)
+        finally:
+            self._restore_function_params(sub_table, mapped_params)
+        if not self._function_has_params(ast_node):
+            self._symbol_table.set_inferred_type(
+                function_name, inferred_func_type)
         # And finally the result of this Call() node will be
         # the return type from the function we just analyzed.
         if isinstance(inferred_func_type, FunctionType):
@@ -523,15 +550,29 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
                 node, inferred_func_type.return_type)
 
     def _map_function_params(self, sub_table, node, def_node):
-        # type: (ChainedSymbolTable, Any, Any) -> None
+        # type: (ChainedSymbolTable, Any, Any) -> FunctionParamTypes
         # TODO: Handle the full calling syntax, kwargs, stargs, etc.
         #       Right now we just handle positional args.
         defined_args = def_node.args
-        for arg, defined in zip(node.args, defined_args.args):
-            inferred_type = self._get_inferred_type_for_node(arg)
-            if inferred_type is not None:
-                name = self._get_name(defined)
-                sub_table.set_inferred_type(name, inferred_type)
+        mapped_params = []
+        for position, defined in enumerate(defined_args.args):
+            name = self._get_name(defined)
+            mapped_params.append((name, sub_table.get_inferred_type(name)))
+            inferred_type = None
+            if position < len(node.args):
+                inferred_type = self._get_inferred_type_for_node(
+                    node.args[position])
+            sub_table.set_inferred_type(name, inferred_type)
+        return mapped_params
+
+    def _restore_function_params(self, sub_table, mapped_params):
+        # type: (ChainedSymbolTable, FunctionParamTypes) -> None
+        for name, inferred_type in mapped_params:
+            sub_table.set_inferred_type(name, inferred_type)
+
+    def _function_has_params(self, def_node):
+        # type: (Any) -> bool
+        return bool(def_node.args.args)
 
     def _get_name(self, node):
         # type: (Any) -> str
@@ -569,6 +610,7 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
 
     def visit_Return(self, node):
         # type: (Any) -> None
+        self._clear_inferred_type_for_node(node)
         self.generic_visit(node)
         inferred_type = self._get_inferred_type_for_node(node.value)
         if inferred_type is not None:

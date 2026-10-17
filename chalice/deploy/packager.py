@@ -20,6 +20,7 @@ from chalice.compat import pip_no_compile_c_shim
 from chalice.utils import OSUtils
 from chalice.utils import UI  # noqa
 from chalice.constants import MISSING_DEPENDENCIES_TEMPLATE
+from chalice.constants import DEFAULT_LAMBDA_ARCHITECTURE
 
 import chalice
 from chalice import app
@@ -81,14 +82,20 @@ class BaseLambdaDeploymentPackager(object):
         'python3.12': 'cp312',
         'python3.13': 'cp313',
         'python3.14': 'cp314',
+        'python3.15': 'cp315',
     }
 
     def __init__(
-        self, osutils: OSUtils, dependency_builder: DependencyBuilder, ui: UI
+        self,
+        osutils: OSUtils,
+        dependency_builder: DependencyBuilder,
+        ui: UI,
+        architecture: str = DEFAULT_LAMBDA_ARCHITECTURE,
     ) -> None:
         self._osutils = osutils
         self._dependency_builder = dependency_builder
         self._ui = ui
+        self._architecture = architecture
 
     def create_deployment_package(
         self, project_dir: str, python_version: str
@@ -128,6 +135,12 @@ class BaseLambdaDeploymentPackager(object):
         # re-downloaded since they will not be compatible.
         return self._deployment_package_filename(project_dir, python_version)
 
+    def _architecture_suffix(self) -> str:
+        # x86_64 has no suffix so existing cached packages are reused.
+        if self._architecture == DEFAULT_LAMBDA_ARCHITECTURE:
+            return ''
+        return '-%s' % self._architecture
+
     def _deployment_package_filename(
         self, project_dir: str, python_version: str, prefix: str = ''
     ) -> str:
@@ -137,7 +150,9 @@ class BaseLambdaDeploymentPackager(object):
             self._osutils.joinpath(project_dir, self._VENDOR_DIR),
             project_dir,
         )
-        filename = '%s%s-%s.zip' % (prefix, hash_contents, python_version)
+        filename = '%s%s-%s%s.zip' % (
+            prefix, hash_contents, python_version, self._architecture_suffix()
+        )
         deployment_package_filename = self._osutils.joinpath(
             project_dir, '.chalice', 'deployments', filename
         )
@@ -463,7 +478,9 @@ class LayerDeploymentPackager(BaseLambdaDeploymentPackager):
         if self._osutils.directory_exists(vendor_dir):
             self._hash_vendor_dir(vendor_dir, h)
         hash_contents = h.hexdigest()
-        filename = '%s%s-%s.zip' % (prefix, hash_contents, python_version)
+        filename = '%s%s-%s%s.zip' % (
+            prefix, hash_contents, python_version, self._architecture_suffix()
+        )
         deployment_package_filename = self._osutils.joinpath(
             project_dir, '.chalice', 'deployments', filename
         )
@@ -483,11 +500,16 @@ class DependencyBuilder(object):
     packager.
     """
 
-    _ADDITIONAL_COMPATIBLE_PLATFORM = {'any', 'linux_x86_64'}
     _MANYLINUX_LEGACY_MAP = {
         'manylinux1_x86_64': 'manylinux_2_5_x86_64',
         'manylinux2010_x86_64': 'manylinux_2_12_x86_64',
         'manylinux2014_x86_64': 'manylinux_2_17_x86_64',
+        'manylinux2014_aarch64': 'manylinux_2_17_aarch64',
+    }
+    # Lambda architecture name to the machine name used in wheel tags.
+    _ARCHITECTURE_TO_MACHINE = {
+        'x86_64': 'x86_64',
+        'arm64': 'aarch64',
     }
 
     # Mapping of abi to glibc version in Lambda runtime.
@@ -501,6 +523,7 @@ class DependencyBuilder(object):
         'cp312': (2, 34),
         'cp313': (2, 34),
         'cp314': (2, 34),
+        'cp315': (2, 34),
     }
     # Fallback version if we're on an unknown python version
     # not in _RUNTIME_GLIBC.
@@ -514,12 +537,16 @@ class DependencyBuilder(object):
     }
 
     def __init__(
-        self, osutils: OSUtils, pip_runner: Optional[PipRunner] = None
+        self,
+        osutils: OSUtils,
+        pip_runner: Optional[PipRunner] = None,
+        architecture: str = DEFAULT_LAMBDA_ARCHITECTURE,
     ) -> None:
         self._osutils = osutils
         if pip_runner is None:
             pip_runner = PipRunner(SubprocessPip(osutils))
         self._pip = pip_runner
+        self._machine = self._ARCHITECTURE_TO_MACHINE[architecture]
 
     def _is_compatible_wheel_filename(
         self, expected_abi: str, filename: str
@@ -556,7 +583,7 @@ class DependencyBuilder(object):
         # legacy manylinux formats to the new perennial format.
         # Then we verify that the glibc version is compatible with the version
         # on the Lambda runtime (from _RUNTIME_GLIBC).
-        if platform in self._ADDITIONAL_COMPATIBLE_PLATFORM:
+        if platform in ('any', 'linux_%s' % self._machine):
             logger.debug("Found compatible platform tag: %s", platform)
             return True
         elif platform.startswith('manylinux'):
@@ -564,7 +591,7 @@ class DependencyBuilder(object):
             # PEP 600.
             perennial_tag = self._MANYLINUX_LEGACY_MAP.get(platform, platform)
             m = re.match("manylinux_([0-9]+)_([0-9]+)_(.*)", perennial_tag)
-            if m is None:
+            if m is None or m.group(3) != self._machine:
                 return False
             tag_major, tag_minor = [int(x) for x in m.groups()[:2]]
             runtime_major, runtime_minor = self._RUNTIME_GLIBC.get(
@@ -646,16 +673,16 @@ class DependencyBuilder(object):
     def _get_pip_platforms(self, abi: str) -> List[str]:
         # Pip treats --platform as a literal tag and does not auto-include
         # lower manylinux_X_Y versions, so we enumerate every glibc minor up
-        # to the runtime's. The trailing manylinux2014_x86_64 alias engages
+        # to the runtime's. The trailing manylinux2014 alias engages
         # pip's legacy compatibility hierarchy (manylinux1, manylinux2010).
         runtime_major, runtime_minor = self._RUNTIME_GLIBC.get(
             abi, self._DEFAULT_GLIBC
         )
         platforms = [
-            'manylinux_%s_%s_x86_64' % (runtime_major, minor)
+            'manylinux_%s_%s_%s' % (runtime_major, minor, self._machine)
             for minor in range(17, runtime_minor + 1)
         ]
-        platforms.append('manylinux2014_x86_64')
+        platforms.append('manylinux2014_%s' % self._machine)
         return platforms
 
     def _download_sdists(self, packages: Set[Package], directory: str) -> None:
@@ -735,7 +762,7 @@ class DependencyBuilder(object):
         # ship with wheels at all in which case we will have an sdist for it.
         # In some cases a platform specific wheel file may be available so pip
         # will have downloaded that, if our platform does not match the
-        # platform lambda runs on (linux_x86_64/manylinux) then the downloaded
+        # platform lambda runs on (linux/manylinux) then the downloaded
         # wheel file may not be compatible with lambda. Pure python wheels
         # still will be compatible because they have no platform dependencies.
         sdists, compatible_wheels, incompatible_wheels = self._categorize_deps(

@@ -21,7 +21,7 @@ def recursive_include(relative_dir):
 
 install_requires = [
     'click>=7,<9.0',
-    'botocore>=1.14.0,<2.0.0',
+    'botocore>=1.21.51,<2.0.0',
     'six>=1.10.0,<2.0.0',
     'pip>=9,<26.2',
     'jmespath>=0.9.3,<2.0.0',
@@ -74,5 +74,6 @@ setup(
         'Programming Language :: Python :: 3.12',
         'Programming Language :: Python :: 3.13',
         'Programming Language :: Python :: 3.14',
+        'Programming Language :: Python :: 3.15',
     ],
 )

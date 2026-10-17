@@ -77,6 +77,24 @@ def test_cp314_wheels_use_al2023_glibc(osutils):
     )
 
 
+def test_python315_runtime_maps_to_cp315():
+    runtime_to_abi = BaseLambdaDeploymentPackager._RUNTIME_TO_ABI
+    assert runtime_to_abi['python3.15'] == 'cp315'
+
+
+def test_cp315_wheels_use_al2023_glibc(osutils):
+    builder = DependencyBuilder(osutils)
+    assert builder._is_compatible_wheel_filename(
+        'cp315', 'foo-1.0-cp315-cp315-manylinux_2_34_x86_64.whl'
+    )
+    assert builder._is_compatible_wheel_filename(
+        'cp315', 'foo-1.0-cp39-abi3-manylinux_2_34_x86_64.whl'
+    )
+    assert not builder._is_compatible_wheel_filename(
+        'cp315', 'foo-1.0-cp315-cp315-manylinux_2_35_x86_64.whl'
+    )
+
+
 def test_pip_platforms_enumerate_glibc_range(osutils):
     builder = DependencyBuilder(osutils)
     assert builder._get_pip_platforms('cp314') == [
@@ -113,6 +131,61 @@ def test_pip_platforms_enumerate_glibc_range(osutils):
         'manylinux_2_25_x86_64',
         'manylinux_2_26_x86_64',
         'manylinux2014_x86_64',
+    ]
+
+
+def test_arm64_wheels_are_compatible(osutils):
+    builder = DependencyBuilder(osutils, architecture='arm64')
+    assert builder._is_compatible_wheel_filename(
+        'cp312', 'foo-1.0-cp312-cp312-manylinux_2_17_aarch64.whl'
+    )
+    assert builder._is_compatible_wheel_filename(
+        'cp312', 'foo-1.0-cp312-cp312-manylinux2014_aarch64.whl'
+    )
+    assert builder._is_compatible_wheel_filename(
+        'cp312', 'foo-1.0-cp312-cp312-linux_aarch64.whl'
+    )
+    assert builder._is_compatible_wheel_filename(
+        'cp312', 'foo-1.0-cp312-cp312-'
+                 'manylinux_2_17_aarch64.manylinux2014_aarch64.whl'
+    )
+    assert builder._is_compatible_wheel_filename(
+        'cp312', 'foo-1.0-py3-none-any.whl'
+    )
+    assert not builder._is_compatible_wheel_filename(
+        'cp312', 'foo-1.0-cp312-cp312-manylinux_2_35_aarch64.whl'
+    )
+
+
+def test_wheels_for_other_architecture_are_incompatible(osutils):
+    x86_builder = DependencyBuilder(osutils)
+    arm_builder = DependencyBuilder(osutils, architecture='arm64')
+    for filename in ['foo-1.0-cp312-cp312-manylinux_2_17_aarch64.whl',
+                     'foo-1.0-cp312-cp312-manylinux2014_aarch64.whl',
+                     'foo-1.0-cp312-cp312-linux_aarch64.whl']:
+        assert not x86_builder._is_compatible_wheel_filename(
+            'cp312', filename)
+    for filename in ['foo-1.0-cp312-cp312-manylinux_2_17_x86_64.whl',
+                     'foo-1.0-cp312-cp312-manylinux2014_x86_64.whl',
+                     'foo-1.0-cp312-cp312-linux_x86_64.whl']:
+        assert not arm_builder._is_compatible_wheel_filename(
+            'cp312', filename)
+
+
+def test_arm64_pip_platforms(osutils):
+    builder = DependencyBuilder(osutils, architecture='arm64')
+    assert builder._get_pip_platforms('cp310') == [
+        'manylinux_2_17_aarch64',
+        'manylinux_2_18_aarch64',
+        'manylinux_2_19_aarch64',
+        'manylinux_2_20_aarch64',
+        'manylinux_2_21_aarch64',
+        'manylinux_2_22_aarch64',
+        'manylinux_2_23_aarch64',
+        'manylinux_2_24_aarch64',
+        'manylinux_2_25_aarch64',
+        'manylinux_2_26_aarch64',
+        'manylinux2014_aarch64',
     ]
 
 

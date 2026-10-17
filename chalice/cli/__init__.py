@@ -29,6 +29,7 @@ from chalice.logs import display_logs, LogRetrieveOptions
 from chalice.utils import create_zip_file
 from chalice.deploy.validate import validate_routes, validate_python_version
 from chalice.deploy.validate import ExperimentalFeatureError
+from chalice.deploy.validate import validate_lambda_architecture
 from chalice.utils import UI, serialize_to_json
 from chalice.constants import DEFAULT_STAGE_NAME
 from chalice.local import LocalDevServer  # noqa
@@ -530,6 +531,10 @@ def package(ctx, single_file, stage, merge_template,
     factory = ctx.obj['factory']  # type: CLIFactory
     factory.profile = profile
     config = factory.create_config_obj(stage)
+    try:
+        validate_lambda_architecture(config)
+    except ValueError as e:
+        raise click.ClickException(str(e))
     options = factory.create_package_options()
     packager = factory.create_app_packager(config, options,
                                            pkg_format,

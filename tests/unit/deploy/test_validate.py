@@ -14,6 +14,7 @@ from chalice.deploy.validate import validate_route_content_types
 from chalice.deploy.validate import validate_unique_function_names
 from chalice.deploy.validate import validate_feature_flags
 from chalice.deploy.validate import validate_endpoint_type
+from chalice.deploy.validate import validate_lambda_architecture
 from chalice.deploy.validate import validate_resource_policy
 from chalice.deploy.validate import ExperimentalFeatureError
 
@@ -279,6 +280,17 @@ def test_can_validate_endpoint_type(sample_app):
     config = Config.create(
         chalice_app=sample_app, api_gateway_endpoint_type='REGIONAL')
     validate_endpoint_type(config)
+
+
+def test_can_validate_lambda_architecture(sample_app):
+    config = Config.create(
+        chalice_app=sample_app, lambda_architecture='aarch64')
+    with pytest.raises(ValueError):
+        validate_lambda_architecture(config)
+
+    config = Config.create(
+        chalice_app=sample_app, lambda_architecture='arm64')
+    validate_lambda_architecture(config)
 
 
 def test_can_validate_feature_flags(sample_app):

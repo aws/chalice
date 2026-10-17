@@ -8,7 +8,7 @@ alabaster==1.0.0
     # via sphinx
 ast-serialize==0.3.0
     # via mypy
-astroid==3.3.11
+astroid==4.3.4
     # via pylint
 babel==2.18.0
     # via sphinx
@@ -46,7 +46,7 @@ hypothesis==6.152.4
     # via -r requirements-test.in
 idna==3.13
     # via requests
-imagesize==2.0.0
+imagesize==2.0.1
     # via sphinx
 iniconfig==2.3.0
     # via pytest
@@ -95,7 +95,7 @@ pygments==2.20.0
     #   doc8
     #   pytest
     #   sphinx
-pylint==3.3.9
+pylint==4.1.3
     # via -r requirements-dev.in
 pytest==9.0.3
     # via

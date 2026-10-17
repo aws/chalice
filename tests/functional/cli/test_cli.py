@@ -302,6 +302,21 @@ def test_package_terraform_err_with_single_file_or_merge(runner):
         assert "Terraform format does not support" in result.output
 
 
+def test_package_fails_on_invalid_lambda_architecture(runner):
+    with runner.isolated_filesystem():
+        newproj.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        config_file = os.path.join('.chalice', 'config.json')
+        with open(config_file) as f:
+            config = json.load(f)
+        config['lambda_architecture'] = 'aarch64'
+        with open(config_file, 'w') as f:
+            json.dump(config, f)
+        result = _run_cli_command(runner, cli.package, ['outdir'])
+        assert result.exit_code == 1, result.output
+        assert 'lambda_architecture must be one of' in result.output
+
+
 def test_debug_flag_enables_logging(runner):
     with runner.isolated_filesystem():
         newproj.create_new_project_skeleton('testproject')
@@ -410,8 +425,8 @@ def test_error_when_no_deployed_record(runner, mock_cli_factory):
 
 
 @pytest.mark.skipif(
-    (3, 10) <= sys.version_info[:2] <= (3, 14),
-    reason=("Cannot generate pipeline for python3.10 - python3.14"),
+    (3, 10) <= sys.version_info[:2] <= (3, 15),
+    reason=("Cannot generate pipeline for python3.10 - python3.15"),
 )
 def test_can_generate_pipeline_for_all(runner):
     with runner.isolated_filesystem():
