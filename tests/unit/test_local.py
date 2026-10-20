@@ -228,6 +228,13 @@ def demo_app_auth():
         )
 
     @demo.authorizer()
+    def auth_with_string_resource(auth_request):
+        return _policy(
+            effect='Allow', resource=(
+                "arn:aws:execute-api:mars-west-1:123456789012:"
+                "ymy8tbxw7b/api/GET/single-resource"))
+
+    @demo.authorizer()
     def demo_auth(auth_request):
         token = auth_request.token
         if token == 'allow':
@@ -290,6 +297,10 @@ def demo_app_auth():
 
     @demo.route('/multi', authorizer=auth_with_multiple_actions)
     def multi():
+        return {}
+
+    @demo.route('/single-resource', authorizer=auth_with_string_resource)
+    def single_resource():
         return {}
 
     @demo.route('/iam', authorizer=iam_authorizer)
@@ -1014,6 +1025,17 @@ class TestLocalBuiltinAuthorizers(object):
                                           create_event):
         authorizer = LocalGatewayAuthorizer(demo_app_auth)
         path = '/multi'
+        event = create_event(path, 'GET', {})
+        event['headers']['authorization'] = 'allow'
+        context = LambdaContext(*lambda_context_args)
+        event, context = authorizer.authorize(path, event, context)
+        assert event['requestContext']['authorizer']['principalId'] == 'user'
+
+    def test_can_understand_string_resource(self, demo_app_auth,
+                                            lambda_context_args,
+                                            create_event):
+        authorizer = LocalGatewayAuthorizer(demo_app_auth)
+        path = '/single-resource'
         event = create_event(path, 'GET', {})
         event['headers']['authorization'] = 'allow'
         context = LambdaContext(*lambda_context_args)

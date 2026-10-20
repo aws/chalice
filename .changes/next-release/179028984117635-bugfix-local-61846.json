@@ -1,0 +1,5 @@
+{
+  "type": "bugfix",
+  "category": "local",
+  "description": "Accept a single resource string in authorizer policy statements in local mode."
+}
