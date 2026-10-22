@@ -47,6 +47,9 @@ class StatFileWatcher(FileWatcher):
     def poll_for_changes_until_shutdown(self, root_dir, callback):
         # type: (str, Callable[[], None]) -> None
         self._seed_mtime_cache(root_dir)
+        # False positive: when watchdog<3.0 is installed, astroid>=4 infers
+        # is_set() as the deprecated isSet() via watchdog's py2 alias.
+        # pylint: disable-next=deprecated-method
         while not self._shutdown_event.is_set():
             self._single_pass_poll(root_dir, callback)
             time.sleep(self.POLL_INTERVAL)
