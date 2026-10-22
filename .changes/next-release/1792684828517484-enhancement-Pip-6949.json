@@ -1,0 +1,5 @@
+{
+  "type": "enhancement",
+  "category": "Pip",
+  "description": "Update pip version range (<26.3) ([#2206](https://github.com/aws/chalice/issues/2206))"
+}
