@@ -275,6 +275,31 @@ def test_follow_logs_all_pages_empty_with_pagination():
         # The last call should not use a next token.
         mock.call(log_group_name='mygroup', start_time=1)
     ]
+    sleep.assert_called_once_with(5)
+
+
+def test_follow_logs_waits_between_empty_polls():
+    calls = mock.Mock(spec=['poll', 'sleep'])
+    client = mock.Mock(spec=TypedAWSClient)
+    calls.attach_mock(client.filter_log_events, 'poll')
+    sleep = mock.Mock(spec=time.sleep)
+    calls.attach_mock(sleep, 'sleep')
+    client.filter_log_events.side_effect = [
+        {'events': []},
+        {'events': []},
+        KeyboardInterrupt(),
+    ]
+    event_gen = logs.FollowLogEventGenerator(client, sleep, poll_time=7)
+    options = logs.LogRetrieveOptions(start_time=1)
+
+    assert list(event_gen.iter_log_events('mygroup', options)) == []
+    assert calls.mock_calls == [
+        mock.call.poll(log_group_name='mygroup', start_time=1),
+        mock.call.sleep(7),
+        mock.call.poll(log_group_name='mygroup', start_time=1),
+        mock.call.sleep(7),
+        mock.call.poll(log_group_name='mygroup', start_time=1),
+    ]
 
 
 def test_follow_logs_defaults_to_ten_minutes():
