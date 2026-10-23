@@ -1,0 +1,50 @@
+{
+  "schema-version": "0.2",
+  "changes": [
+    {
+      "type": "feature",
+      "category": "Lambda",
+      "description": "Add `lambda_architecture` config option to deploy Lambda functions and layers on `arm64` ([#1808](https://github.com/aws/chalice/issues/1808))"
+    },
+    {
+      "type": "bugfix",
+      "category": "Packaging",
+      "description": "Do not package wheel files built for a different CPU architecture than the Lambda function ([#2048](https://github.com/aws/chalice/issues/2048))"
+    },
+    {
+      "type": "enhancement",
+      "category": "Dependencies",
+      "description": "Bump minimum botocore version to 1.21.51 for Lambda architecture support"
+    },
+    {
+      "type": "enhancement",
+      "category": "Terraform",
+      "description": "Bump minimum AWS Terraform provider version to 3.61.0 for Lambda architecture support"
+    },
+    {
+      "type": "feature",
+      "category": "Python",
+      "description": "Add support for Python 3.15 ([#2203](https://github.com/aws/chalice/pull/2203))"
+    },
+    {
+      "type": "enhancement",
+      "category": "Pip",
+      "description": "Update pip version range (<26.3) ([#2206](https://github.com/aws/chalice/issues/2206))"
+    },
+    {
+      "type": "bugfix",
+      "category": "policy",
+      "description": "Fix the generated S3 AbortMultipartUpload action and account-scoped S3 event Lambda permission checks."
+    },
+    {
+      "type": "bugfix",
+      "category": "packaging",
+      "description": "Validate private API resource policy configuration in ``chalice package``."
+    },
+    {
+      "type": "bugfix",
+      "category": "policy",
+      "description": "Fix policy generation for boto3 clients created through parameterized helper functions."
+    }
+  ]
+}

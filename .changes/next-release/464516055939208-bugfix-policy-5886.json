@@ -1,5 +1,0 @@
-{
-  "type": "bugfix",
-  "category": "policy",
-  "description": "Fix policy generation for boto3 clients created through parameterized helper functions."
-}

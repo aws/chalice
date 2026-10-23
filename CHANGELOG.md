@@ -1,6 +1,24 @@
 # Changelog
 
 
+## v1.34.0
+
+
+### Features
+* Add `lambda_architecture` config option to deploy Lambda functions and layers on `arm64` ([#1808](https://github.com/aws/chalice/issues/1808))
+* Add support for Python 3.15 ([#2203](https://github.com/aws/chalice/pull/2203))
+
+### Enhancements
+* Bump minimum botocore version to 1.21.51 for Lambda architecture support
+* Bump minimum AWS Terraform provider version to 3.61.0 for Lambda architecture support
+* Update pip version range (<26.3) ([#2206](https://github.com/aws/chalice/issues/2206))
+
+### Bug fixes
+* Do not package wheel files built for a different CPU architecture than the Lambda function ([#2048](https://github.com/aws/chalice/issues/2048))
+* Fix the generated S3 AbortMultipartUpload action and account-scoped S3 event Lambda permission checks.
+* Validate private API resource policy configuration in ``chalice package``.
+* Fix policy generation for boto3 clients created through parameterized helper functions.
+
 ## v1.33.0
 
 

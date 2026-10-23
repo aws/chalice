@@ -1,5 +1,0 @@
-{
-  "type": "enhancement",
-  "category": "Terraform",
-  "description": "Bump minimum AWS Terraform provider version to 3.61.0 for Lambda architecture support"
-}
