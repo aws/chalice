@@ -2373,6 +2373,57 @@ class TestRemoteState(object):
         assert self.remote_state.resource_exists(api_mapping, 'domain_name')
         assert self.remote_state.resource_exists(api_mapping, 'domain_name')
 
+    @pytest.mark.parametrize('first_exists', [True, False])
+    def test_api_mapping_cache_is_scoped_to_domain(self, first_exists):
+        api_mapping = self.create_api_mapping()
+        self.client.api_mapping_exists.side_effect = [
+            first_exists, not first_exists]
+
+        assert self.remote_state.resource_exists(
+            api_mapping, 'rest.example.com') is first_exists
+        assert self.remote_state.resource_exists(
+            api_mapping, 'ws.example.com') is not first_exists
+        assert self.remote_state.resource_exists(
+            api_mapping, 'rest.example.com') is first_exists
+        assert self.remote_state.resource_exists(
+            api_mapping, 'ws.example.com') is not first_exists
+        assert self.client.api_mapping_exists.call_args_list == [
+            mock.call('rest.example.com', ''),
+            mock.call('ws.example.com', ''),
+        ]
+
+    def test_add_websocket_domain_after_rest_domain(self):
+        rest_domain = create_http_domain_name()
+        rest_domain.domain_name = 'rest.example.com'
+        websocket_domain = create_websocket_domain_name()
+        websocket_domain.domain_name = 'ws.example.com'
+        deployed = DeployedResources({'resources': [{
+            'name': rest_domain.resource_name,
+            'resource_type': 'domain_name',
+            'domain_name': rest_domain.domain_name,
+            'api_mapping': [{'key': '/'}],
+        }]})
+        remote_state = RemoteState(self.client, deployed)
+        self.client.domain_name_exists.return_value = True
+        self.client.domain_name_exists_v2.return_value = False
+        self.client.api_mapping_exists.side_effect = [True, False]
+        planner = PlanStage(remote_state, mock.Mock(spec=OSUtils))
+
+        rest_plan = planner._add_custom_domain_plan(rest_domain, 'REGIONAL')
+        websocket_plan = planner._add_custom_domain_plan(
+            websocket_domain, 'REGIONAL')
+
+        assert models.StoreMultipleValue(
+            name='rest_api_mapping', value=[{'key': '/'}]) in rest_plan
+        create_mapping = [item[0] for item in websocket_plan
+                          if isinstance(item, tuple)]
+        assert models.APICall(
+            method_name='create_api_mapping',
+            params={'domain_name': 'ws.example.com',
+                    'path_key': '(none)', 'stage': 'dev',
+                    'api_id': Variable('websocket_api_id')},
+            output_var='api_mapping') in create_mapping
+
     def test_rest_api_exists_no_deploy(self, no_deployed_values):
         rest_api = self.create_rest_api_model()
         remote_state = RemoteState(

@@ -1,0 +1,5 @@
+{
+  "type": "bugfix",
+  "category": "deploy",
+  "description": "Scope cached API mapping existence checks to their domain names when planning REST and WebSocket custom domains."
+}
