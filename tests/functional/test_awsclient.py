@@ -3764,6 +3764,69 @@ def test_can_retry_create_sqs_event_source(stubbed_session):
     stubbed_session.verify_stubs()
 
 
+def test_create_sqs_event_source_reuses_existing_mapping(stubbed_session):
+    existing_uuid = '11111111-2222-3333-4444-555555555555'
+    queue_arn = 'arn:sqs:queue-name'
+    function_name = 'myfunction'
+    batch_size = 100
+
+    lambda_stub = stubbed_session.stub('lambda')
+    lambda_stub.create_event_source_mapping(
+        EventSourceArn=queue_arn,
+        FunctionName=function_name,
+        BatchSize=batch_size,
+        MaximumBatchingWindowInSeconds=0
+    ).raises_error(
+        error_code='ResourceConflictException',
+        message='An event source mapping with this ARN already exists'
+    )
+    lambda_stub.list_event_source_mappings(
+        EventSourceArn=queue_arn,
+        FunctionName=function_name,
+    ).returns({'EventSourceMappings': [{'UUID': existing_uuid}]})
+    lambda_stub.update_event_source_mapping(
+        UUID=existing_uuid,
+        BatchSize=batch_size,
+        MaximumBatchingWindowInSeconds=0
+    ).returns({})
+
+    stubbed_session.activate_stubs()
+    client = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
+    result = client.create_lambda_event_source(
+        queue_arn, function_name, batch_size
+    )
+    assert result == existing_uuid
+    stubbed_session.verify_stubs()
+
+
+def test_create_sqs_event_source_conflict_without_mapping_raises(
+        stubbed_session):
+    queue_arn = 'arn:sqs:queue-name'
+    function_name = 'myfunction'
+    batch_size = 100
+
+    lambda_stub = stubbed_session.stub('lambda')
+    lambda_stub.create_event_source_mapping(
+        EventSourceArn=queue_arn,
+        FunctionName=function_name,
+        BatchSize=batch_size,
+        MaximumBatchingWindowInSeconds=0
+    ).raises_error(
+        error_code='ResourceConflictException',
+        message='An event source mapping with this ARN already exists'
+    )
+    lambda_stub.list_event_source_mappings(
+        EventSourceArn=queue_arn,
+        FunctionName=function_name,
+    ).returns({'EventSourceMappings': []})
+
+    stubbed_session.activate_stubs()
+    client = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
+    with pytest.raises(botocore.exceptions.ClientError):
+        client.create_lambda_event_source(queue_arn, function_name, batch_size)
+    stubbed_session.verify_stubs()
+
+
 def test_can_delete_sqs_event_source(stubbed_session):
     lambda_stub = stubbed_session.stub('lambda')
     lambda_stub.delete_event_source_mapping(
