@@ -1,0 +1,5 @@
+{
+  "type": "bugfix",
+  "category": "logs",
+  "description": "Wait between polls in `chalice logs --follow` even before the first log event arrives."
+}
