@@ -96,6 +96,8 @@ If an exception is raised in a Lambda handler and no middleware catches the
 exception, the exception will be returned back to the client that invoked
 the Lambda function.
 
+.. _middleware-error-handling-rest:
+
 Rest APIs
 ~~~~~~~~~
 
