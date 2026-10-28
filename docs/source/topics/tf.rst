@@ -36,6 +36,14 @@ your app, you won't be able to switch back to ``chalice deploy``.
 Running ``chalice deploy`` would create an entirely new set of AWS
 resources (API Gateway Rest API, AWS Lambda function, etc).
 
+EventBridge rules for scheduled and CloudWatch events include the application
+name and Chalice stage in their names, for example
+``myapp-dev-process_uploads-event``. This keeps applications and stages with
+the same handler name from sharing a rule. Older Terraform packages used only
+the handler name plus ``-event``. Repackaging an existing application changes
+those rule names, so review the Terraform plan for rule replacements before
+applying it.
+
 Example
 -------
 

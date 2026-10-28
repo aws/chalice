@@ -1203,7 +1203,7 @@ class TerraformGenerator(TemplateGenerator):
         template['resource'].setdefault(
             'aws_cloudwatch_event_rule', {})[
             resource.resource_name] = {
-            'name': resource.resource_name,
+            'name': resource.rule_name,
             'event_pattern': resource.event_pattern
         }
         self._cwe_helper(resource, template)
@@ -1214,7 +1214,7 @@ class TerraformGenerator(TemplateGenerator):
         template['resource'].setdefault(
             'aws_cloudwatch_event_rule', {})[
             resource.resource_name] = {
-            'name': resource.resource_name,
+            'name': resource.rule_name,
             'schedule_expression': resource.schedule_expression,
             'description': resource.rule_description,
         }
