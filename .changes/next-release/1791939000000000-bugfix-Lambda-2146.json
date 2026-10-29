@@ -1,0 +1,5 @@
+{
+  "type": "bugfix",
+  "category": "Lambda",
+  "description": "Reuse an existing event source mapping instead of failing with a ResourceConflictException on redeploy ([#2146](https://github.com/aws/chalice/issues/2146))"
+}
