@@ -139,10 +139,10 @@ class RouteMatcher(object):
         if path != '/' and path.endswith('/'):
             path = path[:-1]
         parts = path.split('/')
-        captured = {}
         for route_url in self.route_urls:
             url_parts = route_url.split('/')
             if len(parts) == len(url_parts):
+                captured = {}
                 for i, j in zip(parts, url_parts):
                     if j.startswith('{') and j.endswith('}'):
                         captured[j[1:-1]] = i
