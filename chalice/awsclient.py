@@ -305,6 +305,17 @@ class TypedAWSClient(object):
         except client.exceptions.NotFoundException:
             return False
 
+    def _get_api_mappings(self, domain_name: str) -> List[Dict[str, Any]]:
+        client = self._client('apigatewayv2')
+        mappings: List[Dict[str, Any]] = []
+        kwargs: Dict[str, Any] = {'DomainName': domain_name}
+        while True:
+            result = client.get_api_mappings(**kwargs)
+            mappings.extend(result['Items'])
+            if not result.get('NextToken'):
+                return mappings
+            kwargs['NextToken'] = result['NextToken']
+
     def get_domain_name(self, domain_name: str) -> Dict[str, Any]:
         client = self._client('apigateway')
         try:
@@ -886,8 +897,26 @@ class TypedAWSClient(object):
         }
         return domain_name
 
-    def delete_domain_name(self, domain_name: str) -> None:
+    def delete_domain_name(
+        self,
+        domain_name: str,
+        api_mapping_keys: Optional[List[str]] = None,
+    ) -> None:
         client = self._client('apigatewayv2')
+        if api_mapping_keys is not None:
+            # If other APIs are still mapped to this domain name, only
+            # remove our mappings, deleting the domain name would also
+            # delete the mappings that belong to someone else.
+            mappings = self._get_api_mappings(domain_name)
+            ours = [m for m in mappings
+                    if m['ApiMappingKey'] in api_mapping_keys]
+            if len(ours) != len(mappings):
+                for mapping in ours:
+                    client.delete_api_mapping(
+                        ApiMappingId=mapping['ApiMappingId'],
+                        DomainName=domain_name,
+                    )
+                return
         params = {'DomainName': domain_name}
 
         exceptions = (client.exceptions.TooManyRequestsException,)

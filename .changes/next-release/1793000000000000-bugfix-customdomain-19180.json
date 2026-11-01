@@ -1,0 +1,5 @@
+{
+  "type": "bugfix",
+  "category": "custom domain",
+  "description": "Don't delete a custom domain name on ``chalice delete`` if other APIs are still mapped to it, only remove the mappings created by the app ([#1918](https://github.com/aws/chalice/issues/1918))"
+}

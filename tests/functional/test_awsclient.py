@@ -1466,6 +1466,54 @@ class TestDeleteDomainName(object):
         awsclient.delete_domain_name(domain_name=domain_name)
         stubbed_session.verify_stubs()
 
+    def test_delete_domain_name_when_only_our_mappings_exist(
+            self, stubbed_session):
+        domain_name = 'test_domain'
+        stubbed_session.stub('apigatewayv2') \
+            .get_api_mappings(DomainName=domain_name) \
+            .returns({'Items': [
+                {'ApiMappingId': 'id1', 'ApiMappingKey': 'foo',
+                     'ApiId': 'api1', 'Stage': 'api'},
+            ]})
+        stubbed_session.stub('apigatewayv2') \
+            .delete_domain_name(DomainName=domain_name).returns({})
+        stubbed_session.activate_stubs()
+
+        awsclient = TypedAWSClient(stubbed_session)
+        awsclient.delete_domain_name(
+            domain_name=domain_name, api_mapping_keys=['foo'])
+        stubbed_session.verify_stubs()
+
+    def test_delete_domain_name_keeps_domain_with_other_mappings(
+            self, stubbed_session):
+        domain_name = 'test_domain'
+        stubbed_session.stub('apigatewayv2') \
+            .get_api_mappings(DomainName=domain_name) \
+            .returns({
+                'Items': [
+                    {'ApiMappingId': 'id1', 'ApiMappingKey': 'foo',
+                     'ApiId': 'api1', 'Stage': 'api'},
+                ],
+                'NextToken': 'token',
+            })
+        stubbed_session.stub('apigatewayv2') \
+            .get_api_mappings(DomainName=domain_name, NextToken='token') \
+            .returns({'Items': [
+                {'ApiMappingId': 'id2', 'ApiMappingKey': 'other-app',
+                 'ApiId': 'api2', 'Stage': 'api'},
+            ]})
+        # Only our mapping is removed, delete_domain_name is never called
+        # (a stubbed call that isn't expected would fail the test).
+        stubbed_session.stub('apigatewayv2') \
+            .delete_api_mapping(ApiMappingId='id1', DomainName=domain_name) \
+            .returns({})
+        stubbed_session.activate_stubs()
+
+        awsclient = TypedAWSClient(stubbed_session)
+        awsclient.delete_domain_name(
+            domain_name=domain_name, api_mapping_keys=['foo'])
+        stubbed_session.verify_stubs()
+
     def test_delete_domain_name_failed(self, stubbed_session):
         domain_name = 'unknown_domain'
         err_msg = 'The resource specified in the request was not found.'

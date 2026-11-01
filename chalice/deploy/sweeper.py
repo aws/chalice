@@ -178,7 +178,18 @@ class ResourceSweeper(object):
         # type: (...) -> ResourceValueType
         params = {
             'domain_name': resource_values['domain_name']
-        }
+        }  # type: Dict[str, Any]
+        api_mapping = resource_values.get('api_mapping')
+        if api_mapping is not None:
+            # The domain name may be shared with other APIs (other Chalice
+            # apps or stages).  Tell the client which mappings belong to
+            # this app so it can leave the domain name alone if it's
+            # still being used by something else.
+            params['api_mapping_keys'] = [
+                '(none)' if api_map['key'] == '/' else
+                api_map['key'].lstrip('/')
+                for api_map in api_mapping
+            ]
         msg = 'Deleting custom domain name: %s\n' % resource_values['name']
         return {
             'instructions': (
