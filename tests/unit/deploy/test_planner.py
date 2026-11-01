@@ -3147,6 +3147,31 @@ class TestUnreferencedResourcePlanner(BasePlannerTests):
             ),
         ]
 
+    def test_delete_domain_name_passes_owned_api_mappings(self):
+        # The domain name might be shared with other apps/stages, the
+        # client needs to know which mappings are ours.
+        deployed = {
+            'resources': [{
+                'name': 'api_gateway_custom_domain',
+                'resource_type': 'domain_name',
+                'domain_name': 'example.com',
+                'api_mapping': [
+                    {'key': '/'},
+                    {'key': '/path_key'},
+                ]
+            }]
+        }
+        plan = []
+        config = FakeConfig(deployed)
+        self.execute(plan, config)
+        assert plan[-1:] == [
+            models.APICall(
+                method_name='delete_domain_name',
+                params={'domain_name': 'example.com',
+                        'api_mapping_keys': ['(none)', 'path_key']},
+            ),
+        ]
+
     def test_can_handle_domain_name_without_api_mapping(self):
         deployed = {
             'resources': [{
