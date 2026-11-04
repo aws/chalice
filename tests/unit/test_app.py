@@ -694,14 +694,18 @@ def test_error_on_duplicate_route_methods():
             return {'foo': 'bar'}
 
 
-def test_json_body_available_with_right_content_type(create_event):
+@pytest.mark.parametrize('content_type', [
+    'application/json', 'Application/JSON', 'APPLICATION/JSON; charset=UTF-8',
+])
+def test_json_body_available_with_right_content_type(
+        create_event, content_type):
     demo = app.Chalice('demo-app')
 
     @demo.route('/', methods=['POST'])
     def index():
         return demo.current_request.json_body
 
-    event = create_event('/', 'POST', {})
+    event = create_event('/', 'POST', {}, content_type=content_type)
     event['body'] = json.dumps({'foo': 'bar'})
 
     result = demo(event, context=None)
@@ -709,14 +713,17 @@ def test_json_body_available_with_right_content_type(create_event):
     assert result == {'foo': 'bar'}
 
 
-def test_json_body_none_with_malformed_json(create_event):
+@pytest.mark.parametrize('content_type', [
+    'application/json', 'Application/JSON', 'APPLICATION/JSON; charset=UTF-8',
+])
+def test_json_body_none_with_malformed_json(create_event, content_type):
     demo = app.Chalice('demo-app')
 
     @demo.route('/', methods=['POST'])
     def index():
         return demo.current_request.json_body
 
-    event = create_event('/', 'POST', {})
+    event = create_event('/', 'POST', {}, content_type=content_type)
     event['body'] = '{"foo": "bar"'
 
     result = demo(event, context=None)
@@ -1103,6 +1110,9 @@ def test_logs_can_be_disabled():
 @pytest.mark.parametrize('content_type,is_json', [
     ('application/json', True),
     ('application/json;charset=UTF-8', True),
+    ('Application/JSON', True),
+    ('APPLICATION/JSON; charset=UTF-8', True),
+    ('Application/Json; Charset=utf-8', True),
     ('application/notjson', False),
 ])
 def test_json_body_available_when_content_type_matches(content_type, is_json):
