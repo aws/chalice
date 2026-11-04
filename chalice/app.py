@@ -436,7 +436,8 @@ class Request(object):
 
     @property
     def json_body(self) -> Any:
-        if self.headers.get('content-type', '').startswith('application/json'):
+        if self.headers.get('content-type', '').lower().startswith(
+                'application/json'):
             if self._json_body is None:
                 try:
                     self._json_body = json.loads(self.raw_body)
