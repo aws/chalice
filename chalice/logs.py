@@ -235,7 +235,7 @@ class FollowLogEventGenerator(BaseLogEventGenerator):
                     most_recent_start_time = max(self._event_id_cache)
                     kwargs['start_time'] = most_recent_start_time
                     self._prune_old_cache_entries(most_recent_start_time)
-                    self._sleep(self._poll_time)
+                self._sleep(self._poll_time)
 
     def _in_cache(self, event: CWLogEvent) -> bool:
         return event['eventId'] in self._event_id_cache[event['timestamp']]
