@@ -1,0 +1,24 @@
+---
+name: "📕 Documentation Issue"
+description: Report an issue in the Chalice documentation
+title: "(short issue description)"
+labels: [documentation, needs-triage, bug]
+assignees: []
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the issue
+      description: A clear and concise description of the issue.
+    validations:
+      required: true
+
+  - type: textarea
+    id: links
+    attributes:
+      label: Links
+      description: |
+        Include links to affected documentation page(s).
+    validations:
+      required: true
+
