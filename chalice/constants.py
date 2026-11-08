@@ -196,6 +196,11 @@ CODEPIPELINE_POLICY = {
             ],
             "Resource": "*",
             "Effect": "Allow"
+        },
+        {
+            "Action": ["codestar-connections:UseConnection"],
+            "Resource": "*",
+            "Effect": "Allow"
         }
     ]
 }
