@@ -19,6 +19,7 @@ from chalice import NotFoundError
 from chalice.test import Client
 from chalice.app import (
     APIGateway,
+    ChaliceViewError,
     Request,
     Response,
     handle_extra_types,
@@ -1040,6 +1041,71 @@ def test_chalice_view_errors_propagate_in_debug_mode(sample_app, create_event):
     raw_response = sample_app(event, context=None)
     assert raw_response['statusCode'] == 404
     assert json_response_body(raw_response)['Code'] == 'NotFoundError'
+
+
+def test_chalice_view_custom_error_in_non_debug_mode(sample_app, create_event):
+    class CustomError(ChaliceViewError):
+        message = None
+
+        def __init__(self, code, message):
+            super().__init__()
+            self.STATUS_CODE = code
+            self.message = message
+
+        def to_response(self):
+            return Response(
+                body=dict(
+                    error=self.__class__.__name__,
+                    custom_msg=str(self.message)
+                ),
+                status_code=self.STATUS_CODE,
+            )
+
+    err_code = 503
+    err_msg = "Method not available"
+
+    @sample_app.route('/internalerr')
+    def internalerr():
+        raise CustomError(err_code, err_msg)
+
+    event = create_event('/internalerr', 'GET', {})
+    raw_response = sample_app(event, context=None)
+    assert raw_response['statusCode'] == err_code
+    assert json_response_body(raw_response)['error'] == 'CustomError'
+    assert json_response_body(raw_response)['custom_msg'] == err_msg
+
+
+def test_chalice_view_custom_error_in_debug_mode(sample_app, create_event):
+    class CustomError(ChaliceViewError):
+        message = None
+
+        def __init__(self, code, message):
+            super().__init__()
+            self.STATUS_CODE = code
+            self.message = message
+
+        def to_response(self):
+            return Response(
+                body=dict(
+                    error=self.__class__.__name__,
+                    custom_msg=str(self.message)
+                ),
+                status_code=self.STATUS_CODE,
+            )
+
+    err_code = 503
+    err_msg = "Method not available"
+
+    @sample_app.route('/internalerr')
+    def internalerr():
+        raise CustomError(err_code, err_msg)
+    sample_app.debug = True
+
+    event = create_event('/internalerr', 'GET', {})
+    raw_response = sample_app(event, context=None)
+    assert raw_response['statusCode'] == err_code
+    assert json_response_body(raw_response)['error'] == 'CustomError'
+    assert json_response_body(raw_response)['custom_msg'] == err_msg
 
 
 def test_case_insensitive_mapping():
