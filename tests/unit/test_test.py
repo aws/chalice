@@ -313,6 +313,105 @@ def test_can_generate_kinesis_event():
         assert response.payload == [b'foo', b'bar', b'baz']
 
 
+def test_can_generate_dynamodb_event():
+    app = Chalice('dynamodb')
+
+    @app.on_dynamodb_record(
+        stream_arn=('arn:aws:dynamodb:us-west-2:12345:table/MyTable/stream/'
+                    '2015-05-11T21:21:33.291')
+    )
+    def foo(event):
+        return [(record.old_image, record.new_image, record.keys) for record in event]
+
+    old_image = {'PK': {'S': 'foo'}, 'SK': {'S': 'bar'}}
+    new_image = {'PK': {'S': 'hello'}, 'SK': {'S': 'world'}}
+
+    with Client(app) as client:
+        event = client.events.generate_dynamodb_event(
+            images=[(old_image, new_image)]
+        )
+        response = client.lambda_.invoke('foo', event)
+        assert len(response.payload) == 1
+        assert response.payload[0][0] == old_image
+        assert response.payload[0][1] == new_image
+        assert response.payload[0][2] == None
+
+
+def test_can_generate_dynamodb_event_keys_only():
+    app = Chalice('dynamodb')
+
+    @app.on_dynamodb_record(
+        stream_arn=('arn:aws:dynamodb:us-west-2:12345:table/MyTable/stream/'
+                    '2015-05-11T21:21:33.291')
+    )
+    def foo(event):
+        return [(record.old_image, record.new_image, record.keys) for record in event]
+
+    old_image = {'PK': {'S': 'foo'}, 'SK': {'S': 'bar'}}
+    new_image = {'PK': {'S': 'hello'}, 'SK': {'S': 'world'}}
+
+    with Client(app) as client:
+        event = client.events.generate_dynamodb_event(
+            images=[(old_image, new_image)],
+            view_type="KEYS_ONLY"
+        )
+        response = client.lambda_.invoke('foo', event)
+        assert len(response.payload) == 1
+        assert response.payload[0][0] == None
+        assert response.payload[0][1] == None
+        assert response.payload[0][2] == list(new_image.keys())
+
+
+def test_can_generate_dynamodb_event_old_image():
+    app = Chalice('dynamodb')
+
+    @app.on_dynamodb_record(
+        stream_arn=('arn:aws:dynamodb:us-west-2:12345:table/MyTable/stream/'
+                    '2015-05-11T21:21:33.291')
+    )
+    def foo(event):
+        return [(record.old_image, record.new_image, record.keys) for record in event]
+
+    old_image = {'PK': {'S': 'foo'}, 'SK': {'S': 'bar'}}
+    new_image = {'PK': {'S': 'hello'}, 'SK': {'S': 'world'}}
+
+    with Client(app) as client:
+        event = client.events.generate_dynamodb_event(
+            images=[(old_image, new_image)],
+            view_type="OLD_IMAGE"
+        )
+        response = client.lambda_.invoke('foo', event)
+        assert len(response.payload) == 1
+        assert response.payload[0][0] == old_image
+        assert response.payload[0][1] == None
+        assert response.payload[0][2] == None
+
+
+def test_can_generate_dynamodb_event_new_image():
+    app = Chalice('dynamodb')
+
+    @app.on_dynamodb_record(
+        stream_arn=('arn:aws:dynamodb:us-west-2:12345:table/MyTable/stream/'
+                    '2015-05-11T21:21:33.291')
+    )
+    def foo(event):
+        return [(record.old_image, record.new_image, record.keys) for record in event]
+
+    old_image = {'PK': {'S': 'foo'}, 'SK': {'S': 'bar'}}
+    new_image = {'PK': {'S': 'hello'}, 'SK': {'S': 'world'}}
+
+    with Client(app) as client:
+        event = client.events.generate_dynamodb_event(
+            images=[(old_image, new_image)],
+            view_type="NEW_IMAGE"
+        )
+        response = client.lambda_.invoke('foo', event)
+        assert len(response.payload) == 1
+        assert response.payload[0][0] == None
+        assert response.payload[0][1] == new_image
+        assert response.payload[0][2] == None
+
+
 def test_can_mix_pure_lambda_and_event_handlers():
     app = Chalice('lambda-only')
 
