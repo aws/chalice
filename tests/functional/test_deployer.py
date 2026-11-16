@@ -515,3 +515,42 @@ def test_can_delete_app(tmpdir):
         call.delete_role(name=u'testapp-dev-index')
     ]
     assert expected_calls == mock_client.method_calls
+
+
+def _packager_with_chalice_in_requirements():
+    def install_fake_chalice(abi, requirements_filepath, site_packages_dir):
+        pkg = os.path.join(site_packages_dir, 'chalice')
+        os.makedirs(os.path.join(pkg, 'deploy'))
+        for name in ['__init__.py', 'app.py', os.path.join('deploy', 'x.py')]:
+            with open(os.path.join(pkg, name), 'w') as f:
+                f.write('# installed chalice')
+
+    builder = mock.Mock(spec=DependencyBuilder)
+    builder.build_site_packages.side_effect = install_fake_chalice
+    return LambdaDeploymentPackager(
+        osutils=chalice.utils.OSUtils(),
+        dependency_builder=builder,
+        ui=mock.Mock(spec=chalice.utils.UI),
+    )
+
+
+def test_chalice_in_requirements_is_included_in_package(tmpdir):
+    appdir = _create_app_structure(tmpdir)
+    packager = _packager_with_chalice_in_requirements()
+    name = packager.create_deployment_package(str(appdir), 'python3.11')
+    with zipfile.ZipFile(name) as z:
+        names = z.namelist()
+    assert 'chalice/deploy/x.py' in names
+    assert len(names) == len(set(names))
+
+
+def test_inject_latest_app_keeps_chalice_from_requirements(tmpdir):
+    appdir = _create_app_structure(tmpdir)
+    packager = _packager_with_chalice_in_requirements()
+    name = packager.create_deployment_package(str(appdir), 'python3.11')
+    appdir.join('app.py').write('# Test app NEW VERSION')
+    packager.inject_latest_app(name, str(appdir))
+    with zipfile.ZipFile(name) as z:
+        names = z.namelist()
+    assert 'chalice/deploy/x.py' in names
+    assert len(names) == len(set(names))

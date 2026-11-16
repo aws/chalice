@@ -161,12 +161,11 @@ class BaseLambdaDeploymentPackager(object):
     def _add_py_deps(
         self, zip_fileobj: ZipFile, deps_dir: str, prefix: str = ''
     ) -> None:
+        # A chalice directory in deps_dir means chalice was listed in
+        # requirements.txt, so the full library is packaged as requested.
+        # _add_app_files then skips its own cherry-picked chalice files.
         prefix_len = len(deps_dir) + 1
         for root, dirnames, filenames in self._osutils.walk(deps_dir):
-            if root == deps_dir and 'chalice' in dirnames:
-                # Don't include any chalice deps.  We cherry pick
-                # what we want to include in _add_app_files.
-                dirnames.remove('chalice')
             for filename in filenames:
                 full_path = self._osutils.joinpath(root, filename)
                 zip_path = full_path[prefix_len:]
@@ -175,7 +174,12 @@ class BaseLambdaDeploymentPackager(object):
                 zip_fileobj.write(full_path, zip_path)
 
     def _add_app_files(self, zip_fileobj: ZipFile, project_dir: str) -> None:
+        existing = set(zip_fileobj.namelist())
         for full_path, zip_path in self._iter_app_filenames(project_dir):
+            # Don't duplicate chalice files already installed from
+            # requirements.txt.
+            if zip_path in existing and zip_path.startswith('chalice/'):
+                continue
             zip_fileobj.write(full_path, zip_path)
 
     def _iter_app_filenames(
@@ -264,8 +268,15 @@ class BaseLambdaDeploymentPackager(object):
             with self._osutils.open_zip(
                 tmpzip, 'w', self._osutils.ZIP_DEFLATED
             ) as outzip:
+                # chalice/deploy/ is only present when chalice itself was
+                # installed from requirements.txt.
+                full_chalice = any(
+                    n.startswith('chalice/deploy/') for n in inzip.namelist()
+                )
                 for el in inzip.infolist():
-                    if self._needs_latest_version(el.filename):
+                    if self._needs_latest_version(el.filename) and not (
+                        full_chalice and el.filename.startswith('chalice/')
+                    ):
                         continue
                     contents = inzip.read(el.filename)
                     outzip.writestr(el, contents)
