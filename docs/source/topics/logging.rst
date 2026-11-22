@@ -107,7 +107,7 @@ given this app:
         return {'hello': 'world'}
 
 
-    @app.lambda_function(name='MyFunction)
+    @app.lambda_function(name='MyFunction')
     def bar(event, context):
         incr_counter()
         app.log.debug("Invoking from function bar")

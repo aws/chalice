@@ -152,7 +152,7 @@ to invoke a view function.  In this version, kwargs are now used instead:
 .. code-block:: python
 
     @app.route('/{a}/{b}')
-    def myview(first, second)
+    def myview(first, second):
         return {}
 
 
@@ -162,7 +162,7 @@ The example above must be updated to:
 .. code-block:: python
 
     @app.route('/{a}/{b}')
-    def myview(a, b)
+    def myview(a, b):
         return {}
 
 Now that functions are invoked with kwargs, the order doesn't matter.  You may
@@ -172,7 +172,7 @@ also write the above view function as:
 .. code-block:: python
 
     @app.route('/{a}/{b}')
-    def myview(b, a)
+    def myview(b, a):
         return {}
 
 

@@ -86,6 +86,8 @@ sample events.  For example:
 
    from chalice import Chalice
 
+   app = Chalice(app_name="testclient")
+
    @app.on_sns_message(topic='mytopic')
    def foo(event):
        return {'message': event.message}
@@ -139,6 +141,7 @@ we create our test client:
 
 .. code-block:: python
 
+   import os
    from chalice import Chalice
 
    app = Chalice(app_name="testclient")
@@ -151,7 +154,7 @@ we create our test client:
    def bar(event, context):
        return {'value': os.environ.get('MY_ENV_VAR')}
 
-    # Test code
+   # Test code
    from chalice.test import Client
 
    def test_foo_function():
@@ -160,7 +163,7 @@ we create our test client:
            assert result.payload == {'value': 'TOP LEVEL'}
 
    def test_bar_function():
-       with Client(app) as client:
+       with Client(app, stage_name='prod') as client:
            result = client.lambda_.invoke('bar')
            assert result.payload == {'value': 'OVERRIDE'}
 
@@ -190,10 +193,10 @@ You can test this route with:
    from chalice.test import Client
    from app import app
 
-    def test_index():
-        with Client(app) as client:
-            response = client.http.get('/')
-            assert response.json_body == {'hello': 'world'}
+   def test_index():
+       with Client(app) as client:
+           response = client.http.get('/')
+           assert response.json_body == {'hello': 'world'}
 
 If you want to access the response body's raw bytes, you can use the
 ``body`` attribute:
@@ -203,10 +206,10 @@ If you want to access the response body's raw bytes, you can use the
    from chalice.test import Client
    from app import app
 
-    def test_index():
-        with Client(app) as client:
-            response = client.http.get('/')
-            assert response.body == b'{"hello":"world"}'
+   def test_index():
+       with Client(app) as client:
+           response = client.http.get('/')
+           assert response.body == b'{"hello":"world"}'
 
 
 You can also test other HTTP methods by using the corresponding
@@ -216,18 +219,19 @@ You can also test other HTTP methods by using the corresponding
 
    import json
    from chalice import Chalice
+   from chalice.test import Client
 
    app = Chalice(app_name="testclient")
 
    @app.route('/', methods=['POST'])
-   def index()
+   def index():
        return app.current_request.json_body
 
 
    def test_index():
       with Client(app) as client:
           response = client.http.post(
-              '/myview',
+              '/',
               headers={'Content-Type':'application/json'},
               body=json.dumps({'example':'json'})
           )
@@ -238,31 +242,31 @@ You can also test builtin authorizers with the test client:
 
 .. code-block:: python
 
-   from chalice import Chalice
+   from chalice import AuthResponse, Chalice
 
    app = Chalice(app_name="testclient")
 
    @app.authorizer()
-   def myauth(event)
+   def myauth(event):
        if event.token == 'allow':
            return AuthResponse(['*'], principal_id='id')
        return AuthResponse([], principal_id='noone')
 
    @app.route('/needs-auth', authorizer=myauth)
-   def needs_auth()
+   def needs_auth():
        return {'success': True}
 
    #  Test code:
    from chalice.test import Client
 
-    def test_needs_auth():
-        with Client(app) as client:
-            response = client.http.get(
-                '/needs-auth', headers={'Authorization': 'allow'})
-            assert response.json_body == {'success': True}
-            assert client.http.get(
-                '/needs-auth',
-                headers={'Authorization': 'deny'}).status_code == 403
+   def test_needs_auth():
+       with Client(app) as client:
+           response = client.http.get(
+               '/needs-auth', headers={'Authorization': 'allow'})
+           assert response.json_body == {'success': True}
+           assert client.http.get(
+               '/needs-auth',
+               headers={'Authorization': 'deny'}).status_code == 403
 
 
 .. _testing-boto3-client-calls:
@@ -410,6 +414,7 @@ test client fixtures:
 .. code-block:: python
 
     import app
+    from botocore.stub import Stubber
     from pytest import fixture
     from chalice.test import Client
 
@@ -452,7 +457,7 @@ test client fixtures:
             bucket='mybucket', key='mykey')
         response = test_client.lambda_.invoke('handle_object_created', event)
         assert response.payload == ['Dog', 'Mountain', 'Snow']
-        stub.assert_no_pending_responses()
+        rekognition_stub.assert_no_pending_responses()
 
 
 Next Steps
