@@ -448,7 +448,7 @@ you would specify:
         "api_handler": {
           "subnet_ids": ["sn-1", "sn-2"],
           "security_group_ids": ["sg-10", "sg-11"],
-          "layers": ["layer-arn-1", "layer-arn-2"],
+          "layers": ["layer-arn-1", "layer-arn-2"]
         }
       }
     }
